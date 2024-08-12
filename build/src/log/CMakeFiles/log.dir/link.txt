@@ -1,0 +1,1 @@
+/usr/sbin/gcc -fPIC -shared -Wl,-soname,liblog.so -o /home/lin17/workspace/contest/test/c/af_packet_catch/lib/liblog.so CMakeFiles/log.dir/logger.c.o

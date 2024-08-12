@@ -1,0 +1,38 @@
+[
+{
+  "directory": "/home/lin17/workspace/contest/test/c/af_packet_catch/build/src/main",
+  "command": "/usr/sbin/gcc -DDEBUG -I/home/lin17/workspace/contest/test/c/af_packet_catch/src/main/./include -I/home/lin17/workspace/contest/test/c/af_packet_catch/src/original_capture/include -I/home/lin17/workspace/contest/test/c/af_packet_catch/src/util/include -g -std=gnu11 -Wall -Wextra -o CMakeFiles/app.dir/main.c.o -c /home/lin17/workspace/contest/test/c/af_packet_catch/src/main/main.c",
+  "file": "/home/lin17/workspace/contest/test/c/af_packet_catch/src/main/main.c",
+  "output": "src/main/CMakeFiles/app.dir/main.c.o"
+},
+{
+  "directory": "/home/lin17/workspace/contest/test/c/af_packet_catch/build/src/original_capture",
+  "command": "/usr/sbin/gcc -DDEBUG -I/home/lin17/workspace/contest/test/c/af_packet_catch/src/original_capture/./include -I/home/lin17/workspace/contest/test/c/af_packet_catch/src/util/include -g -std=gnu11 -Wall -Wextra -o CMakeFiles/original_capture.dir/original_capture.c.o -c /home/lin17/workspace/contest/test/c/af_packet_catch/src/original_capture/original_capture.c",
+  "file": "/home/lin17/workspace/contest/test/c/af_packet_catch/src/original_capture/original_capture.c",
+  "output": "src/original_capture/CMakeFiles/original_capture.dir/original_capture.c.o"
+},
+{
+  "directory": "/home/lin17/workspace/contest/test/c/af_packet_catch/build/src/original_capture",
+  "command": "/usr/sbin/gcc -DDEBUG -I/home/lin17/workspace/contest/test/c/af_packet_catch/src/original_capture/./include -I/home/lin17/workspace/contest/test/c/af_packet_catch/src/util/include -g -std=gnu11 -Wall -Wextra -o CMakeFiles/original_capture.dir/output.c.o -c /home/lin17/workspace/contest/test/c/af_packet_catch/src/original_capture/output.c",
+  "file": "/home/lin17/workspace/contest/test/c/af_packet_catch/src/original_capture/output.c",
+  "output": "src/original_capture/CMakeFiles/original_capture.dir/output.c.o"
+},
+{
+  "directory": "/home/lin17/workspace/contest/test/c/af_packet_catch/build/src/util",
+  "command": "/usr/sbin/gcc -DDEBUG -I/home/lin17/workspace/contest/test/c/af_packet_catch/src/util/./include -I/home/lin17/workspace/contest/test/c/af_packet_catch/extern/lua/include -g -std=gnu11 -Wall -Wextra -o CMakeFiles/util.dir/configure.c.o -c /home/lin17/workspace/contest/test/c/af_packet_catch/src/util/configure.c",
+  "file": "/home/lin17/workspace/contest/test/c/af_packet_catch/src/util/configure.c",
+  "output": "src/util/CMakeFiles/util.dir/configure.c.o"
+},
+{
+  "directory": "/home/lin17/workspace/contest/test/c/af_packet_catch/build/src/util",
+  "command": "/usr/sbin/gcc -DDEBUG -I/home/lin17/workspace/contest/test/c/af_packet_catch/src/util/./include -I/home/lin17/workspace/contest/test/c/af_packet_catch/extern/lua/include -g -std=gnu11 -Wall -Wextra -o CMakeFiles/util.dir/logger.c.o -c /home/lin17/workspace/contest/test/c/af_packet_catch/src/util/logger.c",
+  "file": "/home/lin17/workspace/contest/test/c/af_packet_catch/src/util/logger.c",
+  "output": "src/util/CMakeFiles/util.dir/logger.c.o"
+},
+{
+  "directory": "/home/lin17/workspace/contest/test/c/af_packet_catch/build/src/util",
+  "command": "/usr/sbin/gcc -DDEBUG -I/home/lin17/workspace/contest/test/c/af_packet_catch/src/util/./include -I/home/lin17/workspace/contest/test/c/af_packet_catch/extern/lua/include -g -std=gnu11 -Wall -Wextra -o CMakeFiles/util.dir/signal_handle.c.o -c /home/lin17/workspace/contest/test/c/af_packet_catch/src/util/signal_handle.c",
+  "file": "/home/lin17/workspace/contest/test/c/af_packet_catch/src/util/signal_handle.c",
+  "output": "src/util/CMakeFiles/util.dir/signal_handle.c.o"
+}
+]

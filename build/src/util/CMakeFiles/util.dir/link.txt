@@ -1,0 +1,2 @@
+/usr/sbin/ar qc libutil.a CMakeFiles/util.dir/configure.c.o CMakeFiles/util.dir/logger.c.o CMakeFiles/util.dir/signal_handle.c.o
+/usr/sbin/ranlib libutil.a

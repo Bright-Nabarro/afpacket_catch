@@ -1,0 +1,2 @@
+/usr/sbin/ar qc liboriginal_capture.a CMakeFiles/original_capture.dir/original_capture.c.o CMakeFiles/original_capture.dir/output.c.o
+/usr/sbin/ranlib liboriginal_capture.a
