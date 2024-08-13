@@ -1,10 +1,11 @@
+LinesCount=0
+
 function get_bpf_filter(expr)
-    local prgOutput = io.popen("tcpdump -dd "..expr.." 2>/dev/null")
+    local prgOutput = io.popen("sudo tcpdump -dd "..expr.." 2>/dev/null")
     local context = prgOutput:read("a")
     prgOutput:close()
     local result = {}
     local matchAtLeastOnce = false
-    local retLinesCount = 0
     
     for codeStr, jtStr, jfStr, kStr in
         context:gmatch("{%s*0[xX](%x+),%s*(%d+),%s*(%d+),%s*0[xX](%x+)%s*}")
@@ -25,12 +26,12 @@ function get_bpf_filter(expr)
         
         local entry = { code = code, jt = jt, jf = jf, k = k, }
         table.insert(result, entry)
-        retLinesCount += 1
+        LinesCount= LinesCount + 1
     end
 
-    if (not matchAtLeastOnce) then
+    if (LinesCount == 0) then
         return nil
     end
 
-    return retLinesCount, result
+    return result
 end

@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include "logger.h"
 
-bool g_recSigint = false;
+volatile bool g_recSigint = false;
 
 int block_sig(PrevState* manager, int sig)
 {

@@ -10,7 +10,15 @@ outputPcap='./output/catch.pcap'
 echo "find interface ${interfaceName}"
 echo "save file ${outputPcap}"
 
-echo "bin/app -e ${interfaceName} -w ${outputPcap}"
+if [ ! -z "$1" ]; then
+    bpfExpr="$1"
+    echo ${bpfExpr}
+    echo "start -e ${interfaceName} -w ${outputPcap} -b ${bpfExpr}"
+    bin/app -e ${interfaceName} -w ${outputPcap} -b ${bpfExpr}
+else
+    echo "start -e ${interfaceName} -w ${outputPcap}"
+    bin/app -e ${interfaceName} -w ${outputPcap}
+fi
 
-bin/app -e ${interfaceName} -w ${outputPcap}
+
 

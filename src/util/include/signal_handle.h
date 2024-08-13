@@ -2,7 +2,7 @@
 #include <stdbool.h>
 #include <sys/types.h>
 
-extern bool g_recSigint;
+extern volatile bool g_recSigint;
 
 
 typedef struct PrevState_

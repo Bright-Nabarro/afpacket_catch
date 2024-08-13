@@ -201,9 +201,6 @@ af_packet_catch_SOURCE_DIR:STATIC=/home/lin17/workspace/contest/test/c/af_packet
 //Dependencies for the target
 original_capture_LIB_DEPENDS:STATIC=general;util;general;lua;
 
-//Dependencies for the target
-util_LIB_DEPENDS:STATIC=general;/home/lin17/workspace/contest/test/c/af_packet_catch/extern/lua/lib;
-
 
 ########################
 # INTERNAL cache entries

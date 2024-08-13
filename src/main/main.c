@@ -25,7 +25,7 @@ static int parse_main_args(int argc, char* argv[])
 	};
 
 	int opt;
-	while( (opt = getopt_long(argc, argv, "e:w:l:", longOptions, &optionArg)) != -1 )
+	while( (opt = getopt_long(argc, argv, "e:w:l:b:", longOptions, &optionArg)) != -1 )
 	{
 		switch(opt)
 		{
@@ -42,7 +42,7 @@ static int parse_main_args(int argc, char* argv[])
             set_bpf_argument(optarg);
             break;
 		case '?':
-            cth_log(CTH_LOG_ERROR, "excepted main argument %c", opt);
+            cth_log(CTH_LOG_ERROR, "excepted main argument %c", optopt);
             break;
 		default:
             cth_log(CTH_LOG_FATAL, "unprocessed argument");

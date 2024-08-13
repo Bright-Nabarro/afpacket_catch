@@ -111,23 +111,23 @@ static int set_socket_filter(int sockfd, const char* bpfarg)
     lua_pushstring(L, bpfarg);
     //调用函数，1个参数，2个返回值，没有错误处理函数
     //函数完成后返回值在栈顶
-    if (lua_pcall(L, 1, 2, 0) != LUA_OK)
+    if (lua_pcall(L, 1, 1, 0) != LUA_OK)
     {
         cth_log(CTH_LOG_ERROR, "lua_pcall error: %s", lua_tostring(L, -1));
         goto err;
     }
 
-    //第一个返回值为规则行数
+    //先获取全局的表达式行数
+    lua_getglobal(L, "LinesCount");
     if (!lua_isnumber(L, -1))
     {
-        cth_log(CTH_LOG_ERROR, "unexcepted return type");
+        cth_log(CTH_LOG_ERROR, "global LinesCount unset");
         goto err;
     }
-
     size_t bpfLines = lua_tonumber(L, -1);
     bpfCode = malloc(bpfLines * sizeof(struct sock_filter));
-    
     lua_pop(L, 1);
+
 
     if (lua_isnil(L, -1))
     {
@@ -141,6 +141,7 @@ static int set_socket_filter(int sockfd, const char* bpfarg)
         goto err;
     }
 
+    
     //确保从表头开始遍历
     lua_pushnil(L);
     //table的位置在栈顶之下
@@ -165,7 +166,7 @@ static int set_socket_filter(int sockfd, const char* bpfarg)
             int value = lua_tonumber(L, -1);
             const char* key = lua_tostring(L, -2);
             lua_pop(L, 1);
-            if (!set_bpf_code(bpfCode, idx, key, &value))
+            if (set_bpf_code(bpfCode, idx, key, &value))
             {
                 cth_log(CTH_LOG_ERROR, "set_bpf_code error");
                 goto err;
@@ -182,7 +183,7 @@ static int set_socket_filter(int sockfd, const char* bpfarg)
     if (setsockopt(sockfd, SOL_SOCKET, SO_ATTACH_FILTER, &filter, sizeof filter) < 0)
     {
         cth_log_err(CTH_LOG_ERROR, "setsockopt");
-        return -1;
+        goto err;
     }
 
     free(bpfCode);
@@ -234,7 +235,7 @@ int get_original_socket(int* p_sockfd, const char* ethName)
     const char* bpfarg = get_bpf_argument();
     if (bpfarg != NULL)
     {
-        if (!set_socket_filter(*p_sockfd, bpfarg))
+        if (set_socket_filter(*p_sockfd, bpfarg))
         {
             cth_log(CTH_LOG_ERROR, "set_socket_filter error, use default");
             ret |= CTH_SET_FILITER_ERR;
