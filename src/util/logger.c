@@ -1,21 +1,37 @@
 #include "logger.h"
 
+#include <pthread.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include "queue.h"
 
-int cth_log_init(const char* path)
+typedef struct LogEntry
 {
-	(void)path;
+    char* msgBuf;
+    size_t msgLen;
+    STAILQ_ENTRY(LogEntry) entries;
+} LogEntry;
+
+STAILQ_HEAD(LogEntryHead, LogEntry);
+
+typedef struct
+{
+    struct LogEntryHead* p_head;
+} LogQueArgs;
+
+
+int cth_log_init()
+{
 	return 0;
 }
 
 void cth_log_close()
 {
-
+    
 }
 
-static const char* log_level_to_string(enum CTH_LOG_LEVEL logLevel)
+const char* log_level_to_string(enum CTH_LOG_LEVEL logLevel)
 {
 	#define CASE_STR(X) case (X): \
 		return #X
@@ -48,3 +64,4 @@ void cth_log_err(enum CTH_LOG_LEVEL logLevel, const char* msg)
 {
 	cth_log(logLevel, "%s error: %s", msg, strerror(errno));
 }
+

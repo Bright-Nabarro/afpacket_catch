@@ -1,6 +1,7 @@
 #include <getopt.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <stdio.h>
 
 #include "configure.h"
 #include "original_capture.h"
@@ -55,9 +56,23 @@ static int parse_main_args(int argc, char* argv[])
 
 int main(int argc, char* argv[])
 {
+    if (cth_log_init())
+    {
+        fprintf(stderr, "logger initial failure\n");
+        return -1;
+    }
+
     parse_main_args(argc, argv);
 
-    return original_main();
+    if (original_main())
+    {
+        cth_log(CTH_LOG_FATAL, "original main error\n");
+        cth_log_close();
+        return -1;
+    }
+    
+    cth_log_close();
+    return 0;
 }
 
 

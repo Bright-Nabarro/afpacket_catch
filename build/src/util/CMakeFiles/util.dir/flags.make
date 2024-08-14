@@ -4,7 +4,7 @@
 # compile C with /usr/sbin/gcc
 C_DEFINES = -DDEBUG
 
-C_INCLUDES = -I/home/lin17/workspace/contest/test/c/af_packet_catch/src/util/./include -I/home/lin17/workspace/contest/test/c/af_packet_catch/extern/lua/include
+C_INCLUDES = -I/home/lin17/workspace/contest/test/c/af_packet_catch/src/util/./include -I/home/lin17/workspace/contest/test/c/af_packet_catch/extern/lua/include -I/home/lin17/workspace/contest/test/c/af_packet_catch/extern/unix_sys/include
 
 C_FLAGS = -g -std=gnu11 -Wall -Wextra
 
