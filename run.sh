@@ -12,10 +12,10 @@ echo "save file ${outputPcap}"
 
 if [ ! -z "$1" ]; then
     echo "start -e ${interfaceName} -w ${outputPcap} -b ${bpfExpr}"
-    bin/app -e ${interfaceName} -w ${outputPcap} -b ${bpfExpr}
+    sudo bin/app -e ${interfaceName} -w ${outputPcap} -b ${bpfExpr}
 else
     echo "start -e ${interfaceName} -w ${outputPcap}"
-    bin/app -e ${interfaceName} -w ${outputPcap}
+    sudo bin/app -e ${interfaceName} -w ${outputPcap}
 fi
 
 

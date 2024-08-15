@@ -8,9 +8,6 @@
 #include <signal.h>
 #include <errno.h>
 
-//线程需要屏蔽的信号
-static sigset_t thdSet;
-
 #define TASK_LOG(scheduler, logLevel, fmt, ...)                                \
 	do                                                                         \
 	{                                                                          \
@@ -52,18 +49,8 @@ CthTaskScheduler* cth_task_scheduler_init(bool useLogger, size_t queueSize)
     scheduler->taskQueue = malloc(sizeof(CthTask) * queueSize);
     scheduler->shutdown = false;
     scheduler->useLogger = useLogger;
+    scheduler->addTaskWorking = ATOMIC_VAR_INIT(false);
     
-    (void)errno;        //消除clangd错误警告
-    if (sigemptyset(&thdSet) < 0)
-    {
-        TASK_LOG(scheduler, CTH_LOG_FATAL, "sigemptyset error: %s", strerror(errno));
-        return NULL;
-    }
-    if (sigaddset(&thdSet, SIGINT) < 0)
-    {
-        TASK_LOG(scheduler, CTH_LOG_FATAL, "sigaddset error: %s", strerror(errno));
-        return NULL;
-    }
 
     int ret;
     ret = pthread_mutex_init(&scheduler->queueMutex, NULL);
@@ -134,6 +121,8 @@ int cth_task_scheduler_add(CthTaskScheduler* scheduler, void(*func)(void*), void
     args->arg = arg;
 
     int ret;
+    
+    atomic_store(&scheduler->addTaskWorking, true);
     // 在线程函数中释放args 
     ret = pthread_create(&addTaskThread, NULL, cth_task_scheduler_add_task, args);
     if (ret != 0)
@@ -224,6 +213,17 @@ bool cth_scheduler_queue_empty(const CthTaskScheduler* scheduler)
 
 static void* cth_task_scheduler_manager(void* arg)
 {
+    sigset_t thdSet;
+    if (sigemptyset(&thdSet) < 0)
+    {
+        fprintf(stderr, "sigemptyset error: %s", strerror(errno));
+        _exit(1);
+    }
+    if (sigaddset(&thdSet, SIGINT) < 0)
+    {
+        fprintf(stderr, "sigaddset error: %s", strerror(errno));
+        _exit(1);
+    }
     if (pthread_sigmask(SIG_BLOCK, &thdSet, NULL))
     {
         perror("pthread_sigmask");
@@ -232,7 +232,9 @@ static void* cth_task_scheduler_manager(void* arg)
 
     CthTaskScheduler* scheduler = arg;
     int ret;
-    while(!scheduler->shutdown || !cth_scheduler_queue_empty(scheduler))
+    while(!scheduler->shutdown
+        || !cth_scheduler_queue_empty(scheduler)
+        || atomic_load(&scheduler->addTaskWorking))
     {
         ret = pthread_mutex_lock(&scheduler->queueMutex);
         if (ret)
@@ -243,7 +245,9 @@ static void* cth_task_scheduler_manager(void* arg)
         
         while(cth_scheduler_queue_empty(scheduler))
         {
-            if (scheduler->shutdown && cth_scheduler_queue_empty(scheduler))
+            if (scheduler->shutdown
+                && cth_scheduler_queue_empty(scheduler)
+                && !atomic_load(&scheduler->addTaskWorking))
             {
                 ret = pthread_mutex_unlock(&scheduler->queueMutex);
                 if (ret)
@@ -300,6 +304,17 @@ static void* cth_task_scheduler_manager(void* arg)
 
 static void* cth_task_scheduler_add_task(void* arg)
 {
+    sigset_t thdSet;
+    if (sigemptyset(&thdSet) < 0)
+    {
+        fprintf(stderr, "sigemptyset error: %s", strerror(errno));
+        _exit(1);
+    }
+    if (sigaddset(&thdSet, SIGINT) < 0)
+    {
+        fprintf(stderr, "sigaddset error: %s", strerror(errno));
+        _exit(1);
+    }
     if (pthread_sigmask(SIG_BLOCK, &thdSet, NULL))
     {
         perror("pthread_sigmask");
@@ -351,6 +366,8 @@ static void* cth_task_scheduler_add_task(void* arg)
         TASK_LOG(scheduler, CTH_LOG_FATAL, "pthread_mutex_destroy error: %s", strerror(ret));
         _exit(1);
     }
+
+    atomic_store(&scheduler->addTaskWorking, false);
     
     return NULL;
 }

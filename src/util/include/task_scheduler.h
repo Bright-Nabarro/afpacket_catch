@@ -32,6 +32,7 @@ typedef struct
     
     //atomic_int except;
     bool shutdown;
+    atomic_bool addTaskWorking;
 } CthTaskScheduler;
 
 /* return NULL if error */
@@ -41,4 +42,4 @@ int cth_task_scheduler_add(CthTaskScheduler* manager, void(*func)(void*), void* 
 
 int cth_task_scheduler_destroy(CthTaskScheduler* manager);
 
-inline bool cth_scheduler_queue_empty(const CthTaskScheduler* scheduler);
+bool cth_scheduler_queue_empty(const CthTaskScheduler* scheduler);

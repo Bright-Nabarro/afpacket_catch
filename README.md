@@ -10,5 +10,5 @@
 8. `task_scheduler`为区分不同的Log输出引入了运行时开销
 9. 将`log`使用的`configure`和`后台队列`隔离出来
 10. 线程函数的`pthread_sigmask`错误输出不统一，与`9.`有关
-
+11. `task_scheduler`最后的`shut_down`非原子
 

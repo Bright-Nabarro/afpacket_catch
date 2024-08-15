@@ -71,6 +71,9 @@ int main(int argc, char* argv[])
         return -1;
     }
     
+    //可能在log添加线程时，main线程抢先执行close操作，将bool标记为true,
+    //然后manager判断工作结束，导致不能正常写入
+    cth_log(CTH_LOG_INFO, "testing");
     cth_log_close();
     return 0;
 }

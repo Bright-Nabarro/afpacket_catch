@@ -53,7 +53,9 @@ int cth_log_init()
 
 void cth_log_close()
 {
-    fclose(logFile);
+    fflush(logFile);
+    if (logFile != stdout)
+        fclose(logFile);
     if (cth_task_scheduler_destroy(scheduler))
     {
         fprintf(stderr, "cth_task_scheduler_destroy error\n");
