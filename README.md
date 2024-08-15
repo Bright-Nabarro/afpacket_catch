@@ -8,6 +8,7 @@
 6. `task_scheduler`的特殊日志机制需要避免 CTH_LOG_... 多次在不同模块定义
 7. 没有内存分配失败的应对措施
 8. `task_scheduler`为区分不同的Log输出引入了运行时开销
-
+9. 将`log`使用的`configure`和`后台队列`隔离出来
+10. 线程函数的`pthread_sigmask`错误输出不统一，与`9.`有关
 
 

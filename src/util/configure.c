@@ -1,8 +1,8 @@
 #include "configure.h"
 
 #include <stdlib.h>
-#include <logger.h>
 #include <string.h>
+#include <stdio.h>
 
 #define cth_default_ethernet		"eth0"
 #define cth_default_save_pcap_path	"./output.pcap"
@@ -28,7 +28,7 @@ static char* bpf_argument = NULL;      //NULL即为默认值
 	{                                                                          \
 		if (value == NULL)                                                     \
 		{                                                                      \
-			cth_log(CTH_LOG_WARNING, "%s unset, use default", #value);         \
+			printf("%s unset, use default\n", #value);                         \
 			value = cth_default_##value;                                       \
 			return value;                                                      \
 		}                                                                      \

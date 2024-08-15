@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <time.h>
+#include <errno.h>
 
 #include "configure.h"
 #include "logger.h"
@@ -88,7 +89,7 @@ int initial_pcap_file(const char* path)
     output_file = fopen(path, "wb");
     if (!output_file) 
     {
-        cth_log_err(CTH_LOG_FATAL, "fopen");
+        cth_log_err(CTH_LOG_FATAL, "fopen", errno);
         return -1;
     }
 

@@ -33,7 +33,7 @@ static int bind_socket_eth(int sockfd, const char* ethName, struct ifreq* p_ifr)
 	//获取网络接口索引
 	if (ioctl(sockfd, SIOCGIFINDEX, p_ifr) < 0)
 	{
-		cth_log_err(CTH_LOG_ERROR, "ioctl");
+		cth_log_err(CTH_LOG_ERROR, "ioctl", errno);
 		return -1;
 	}
 	cth_log(CTH_LOG_STATUS, "eth bind index: %d", p_ifr->ifr_ifindex);
@@ -48,7 +48,7 @@ static int bind_socket_eth(int sockfd, const char* ethName, struct ifreq* p_ifr)
 	//绑定
 	if (bind(sockfd, (struct sockaddr*)&sll, sizeof(sll)) < 0)
 	{
-		cth_log_err(CTH_LOG_ERROR, "bind");
+		cth_log_err(CTH_LOG_ERROR, "bind", errno);
 		return -1;
 	}
 
@@ -182,7 +182,7 @@ static int set_socket_filter(int sockfd, const char* bpfarg)
     filter.filter = bpfCode;
     if (setsockopt(sockfd, SOL_SOCKET, SO_ATTACH_FILTER, &filter, sizeof filter) < 0)
     {
-        cth_log_err(CTH_LOG_ERROR, "setsockopt");
+        cth_log_err(CTH_LOG_ERROR, "setsockopt", errno);
         goto err;
     }
 
@@ -202,7 +202,7 @@ int get_original_socket(int* p_sockfd, const char* ethName)
 	*p_sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	if (*p_sockfd < 0)
 	{
-		cth_log_err(CTH_LOG_FATAL, "socket");
+		cth_log_err(CTH_LOG_FATAL, "socket", errno);
 		p_sockfd = NULL;
 		return CTH_SOCKET_ERR;
 	}
@@ -223,7 +223,7 @@ int get_original_socket(int* p_sockfd, const char* ethName)
     if (setsockopt(*p_sockfd, SOL_PACKET, PACKET_ADD_MEMBERSHIP,
 				&mreq, sizeof mreq) < 0)
 	{
-		cth_log_err(CTH_LOG_ERROR, "setsockopt");
+		cth_log_err(CTH_LOG_ERROR, "setsockopt", errno);
 		ret |= CTH_SETMIX_MODE_ERR;
 	}
     else
@@ -281,7 +281,7 @@ static int original_main_loop(int sockfd)
 			break;
 		if (numBytes < 0)
 		{
-			cth_log_err(CTH_LOG_ERROR, "recvfrom");
+			cth_log_err(CTH_LOG_ERROR, "recvfrom", errno);
 			goto loop_continue;
 		}
 

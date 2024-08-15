@@ -7,6 +7,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON) 	#生成compile_commands.json文件
 
 if (ENABLE_RELEASE)
     set(CMAKE_BUILD_TYPE Release)
+    add_compile_definitions(NDEBUG)     #针对assert
 else()
     set(CMAKE_BUILD_TYPE Debug)
     add_compile_definitions(DEBUG)

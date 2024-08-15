@@ -66,7 +66,7 @@ int main(int argc, char* argv[])
 
     if (original_main())
     {
-        cth_log(CTH_LOG_FATAL, "original main error\n");
+        cth_log(CTH_LOG_FATAL, "original main error");
         cth_log_close();
         return -1;
     }

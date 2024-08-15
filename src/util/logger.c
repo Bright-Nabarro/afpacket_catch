@@ -1,10 +1,10 @@
 #include "logger.h"
 
+#include <assert.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <errno.h>
 #include "configure.h"
 #include "task_scheduler.h"
 
@@ -27,18 +27,22 @@ typedef struct
 
 int cth_log_init()
 {
+	if (get_log_output_path() == NULL)
+	{
+		logFile = stdout;
+	}
+	else
+	{
+		logFile = fopen(get_log_output_path(), "w");
+        if (logFile == NULL)
+        {
+            perror("fopen");
+            fprintf(stderr, "use default output\n");
+            logFile = stdout;
+        }
+	}
+
     scheduler = cth_task_scheduler_init(true, CTH_LOG_QUE_SIZ);
-    if (get_log_output_path() == NULL)
-        logFile = stdout;
-    else
-        logFile = fopen(get_log_output_path(), "w");
-
-    if (logFile == NULL)
-    {
-        perror("fopen");
-        return -1;
-    }
-
     if (scheduler == NULL)
     {
         fprintf(stderr, "cth_task_scheduler_init error\n");
@@ -78,6 +82,7 @@ void cth_log(enum CTH_LOG_LEVEL logLevel, const char* fmt, ...)
 	va_list args;
 
     CthLogThdFuncArgs* funcArgs = malloc(sizeof(CthLogThdFuncArgs));
+    assert(logFile != NULL);
     funcArgs->file = logFile;
     funcArgs->logLevel = logLevel;
     funcArgs->fmt = fmt;
@@ -92,9 +97,9 @@ void cth_log(enum CTH_LOG_LEVEL logLevel, const char* fmt, ...)
 	va_end(args);
 }
 
-void cth_log_err(enum CTH_LOG_LEVEL logLevel, const char* msg)
+void cth_log_err(enum CTH_LOG_LEVEL logLevel, const char* msg, int errcode)
 {
-	cth_log(logLevel, "%s error: %s", msg, strerror(errno));
+	cth_log(logLevel, "%s error: %s", msg, strerror(errcode));
 }
 
 //在线程管理中自动释放参数
@@ -107,3 +112,4 @@ static void cth_log_callback(void* args)
 	fprintf(file, "\n");
     va_end(thdArgs->args);
 }
+

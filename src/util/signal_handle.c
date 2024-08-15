@@ -18,7 +18,7 @@ int block_sig(PrevState* manager, int sig)
 	
 	if (sigprocmask(SIG_BLOCK, &mask, &manager->prevMask) < 0)
 	{
-		cth_log_err(CTH_LOG_FATAL, "sigprocmask");
+		cth_log_err(CTH_LOG_FATAL, "sigprocmask", errno);
 		return -1;
 	}
 
@@ -32,7 +32,7 @@ int recover_sig(PrevState* manager)
 	errno = manager->olderrno;
 	if (sigprocmask(SIG_SETMASK, &manager->prevMask, NULL) < 0)
 	{
-		cth_log_err(CTH_LOG_FATAL, "sigprocmask");
+		cth_log_err(CTH_LOG_FATAL, "sigprocmask", errno);
 		return -1;
 	}
 	return 0;
@@ -72,7 +72,7 @@ int initial_signal()
 
 	if (sigaction(SIGINT, &sa, NULL) < 0)
 	{
-		cth_log_err(CTH_LOG_FATAL, "sigaction");
+		cth_log_err(CTH_LOG_FATAL, "sigaction", errno);
 		return -1;
 	}
 

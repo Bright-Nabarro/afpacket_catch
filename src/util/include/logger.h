@@ -14,7 +14,7 @@ void cth_log_close();
 
 void cth_log(enum CTH_LOG_LEVEL logLevel, const char* fmt, ...);
 
-void cth_log_err(enum CTH_LOG_LEVEL logLevel, const char* msg);
+void cth_log_err(enum CTH_LOG_LEVEL logLevel, const char* msg, int errcode);
 
 const char* log_level_to_string(enum CTH_LOG_LEVEL logLevel);
 

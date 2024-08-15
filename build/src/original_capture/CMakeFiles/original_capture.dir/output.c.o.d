@@ -43,5 +43,8 @@ src/original_capture/CMakeFiles/original_capture.dir/output.c.o: \
  /usr/include/bits/time.h /usr/include/bits/types/struct_tm.h \
  /usr/include/bits/types/struct_itimerspec.h \
  /usr/include/bits/types/locale_t.h /usr/include/bits/types/__locale_t.h \
+ /usr/include/errno.h /usr/include/bits/errno.h \
+ /usr/include/linux/errno.h /usr/include/asm/errno.h \
+ /usr/include/asm-generic/errno.h /usr/include/asm-generic/errno-base.h \
  /home/lin17/workspace/contest/test/c/af_packet_catch/src/util/include/configure.h \
  /home/lin17/workspace/contest/test/c/af_packet_catch/src/util/include/logger.h

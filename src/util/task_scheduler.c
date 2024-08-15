@@ -5,6 +5,11 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <logger.h>
+#include <signal.h>
+#include <errno.h>
+
+//线程需要屏蔽的信号
+static sigset_t thdSet;
 
 #define TASK_LOG(scheduler, logLevel, fmt, ...)                                \
 	do                                                                         \
@@ -48,6 +53,18 @@ CthTaskScheduler* cth_task_scheduler_init(bool useLogger, size_t queueSize)
     scheduler->shutdown = false;
     scheduler->useLogger = useLogger;
     
+    (void)errno;        //消除clangd错误警告
+    if (sigemptyset(&thdSet) < 0)
+    {
+        TASK_LOG(scheduler, CTH_LOG_FATAL, "sigemptyset error: %s", strerror(errno));
+        return NULL;
+    }
+    if (sigaddset(&thdSet, SIGINT) < 0)
+    {
+        TASK_LOG(scheduler, CTH_LOG_FATAL, "sigaddset error: %s", strerror(errno));
+        return NULL;
+    }
+
     int ret;
     ret = pthread_mutex_init(&scheduler->queueMutex, NULL);
     if (ret != 0)
@@ -207,6 +224,12 @@ bool cth_scheduler_queue_empty(const CthTaskScheduler* scheduler)
 
 static void* cth_task_scheduler_manager(void* arg)
 {
+    if (pthread_sigmask(SIG_BLOCK, &thdSet, NULL))
+    {
+        perror("pthread_sigmask");
+        _exit(1);
+    }
+
     CthTaskScheduler* scheduler = arg;
     int ret;
     while(!scheduler->shutdown || !cth_scheduler_queue_empty(scheduler))
@@ -220,7 +243,7 @@ static void* cth_task_scheduler_manager(void* arg)
         
         while(cth_scheduler_queue_empty(scheduler))
         {
-            if (!scheduler->shutdown || !cth_scheduler_queue_empty(scheduler))
+            if (scheduler->shutdown && cth_scheduler_queue_empty(scheduler))
             {
                 ret = pthread_mutex_unlock(&scheduler->queueMutex);
                 if (ret)
@@ -268,6 +291,8 @@ static void* cth_task_scheduler_manager(void* arg)
         }
 
         tk_func(tk_arg);
+        free(tk_arg);
+        free(currTask);
     }
 
     return NULL;
@@ -275,6 +300,12 @@ static void* cth_task_scheduler_manager(void* arg)
 
 static void* cth_task_scheduler_add_task(void* arg)
 {
+    if (pthread_sigmask(SIG_BLOCK, &thdSet, NULL))
+    {
+        perror("pthread_sigmask");
+        _exit(1);
+    }
+
     CthTaskSchedulerAddTaskArgs* args = arg;
     CthTaskScheduler* scheduler = args->scheduler;
     
