@@ -3,9 +3,6 @@
 #include <stdbool.h>
 #include <stdatomic.h>
 
-#ifndef NO_LOGGER
-#include <logger.h>
-#endif
 
 typedef struct
 {
@@ -20,11 +17,15 @@ typedef struct
  */
 typedef struct
 {
-    CthTask* taskQueue;
+    bool useLogger;
+
+    CthTask** taskQueue;
     size_t queueSize;
     size_t queueHead;
     size_t queueTail;       //超尾
-    pthread_cond_t queueEmpty;
+    bool queueFull;
+    pthread_cond_t condQueueEmpty;
+    pthread_cond_t condQueueFull;
     pthread_mutex_t queueMutex;
 
     pthread_t managerThread;
@@ -34,10 +35,10 @@ typedef struct
 } CthTaskScheduler;
 
 /* return NULL if error */
-//暂时用不到前两个参数
-CthTaskScheduler* cth_task_scheduler_init(size_t queueSize);
+CthTaskScheduler* cth_task_scheduler_init(bool useLogger, size_t queueSize);
 
 int cth_task_scheduler_add(CthTaskScheduler* manager, void(*func)(void*), void* arg);
 
 int cth_task_scheduler_destroy(CthTaskScheduler* manager);
 
+inline bool cth_scheduler_queue_empty(const CthTaskScheduler* scheduler);

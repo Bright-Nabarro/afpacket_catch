@@ -1,2 +1,2 @@
-/usr/sbin/ar qc liboriginal_capture.a CMakeFiles/original_capture.dir/original_capture.c.o CMakeFiles/original_capture.dir/output.c.o
-/usr/sbin/ranlib liboriginal_capture.a
+/usr/sbin/ar qc /home/lin17/workspace/contest/test/c/af_packet_catch/lib/liboriginal_capture.a CMakeFiles/original_capture.dir/original_capture.c.o CMakeFiles/original_capture.dir/output.c.o
+/usr/sbin/ranlib /home/lin17/workspace/contest/test/c/af_packet_catch/lib/liboriginal_capture.a

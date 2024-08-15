@@ -202,6 +202,30 @@ signal_handle.c.s:
 	cd /home/lin17/workspace/contest/test/c/af_packet_catch/build && $(MAKE) $(MAKESILENT) -f src/util/CMakeFiles/util.dir/build.make src/util/CMakeFiles/util.dir/signal_handle.c.s
 .PHONY : signal_handle.c.s
 
+task_scheduler.o: task_scheduler.c.o
+.PHONY : task_scheduler.o
+
+# target to build an object file
+task_scheduler.c.o:
+	cd /home/lin17/workspace/contest/test/c/af_packet_catch/build && $(MAKE) $(MAKESILENT) -f src/util/CMakeFiles/util.dir/build.make src/util/CMakeFiles/util.dir/task_scheduler.c.o
+.PHONY : task_scheduler.c.o
+
+task_scheduler.i: task_scheduler.c.i
+.PHONY : task_scheduler.i
+
+# target to preprocess a source file
+task_scheduler.c.i:
+	cd /home/lin17/workspace/contest/test/c/af_packet_catch/build && $(MAKE) $(MAKESILENT) -f src/util/CMakeFiles/util.dir/build.make src/util/CMakeFiles/util.dir/task_scheduler.c.i
+.PHONY : task_scheduler.c.i
+
+task_scheduler.s: task_scheduler.c.s
+.PHONY : task_scheduler.s
+
+# target to generate assembly for a file
+task_scheduler.c.s:
+	cd /home/lin17/workspace/contest/test/c/af_packet_catch/build && $(MAKE) $(MAKESILENT) -f src/util/CMakeFiles/util.dir/build.make src/util/CMakeFiles/util.dir/task_scheduler.c.s
+.PHONY : task_scheduler.c.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -220,6 +244,9 @@ help:
 	@echo "... signal_handle.o"
 	@echo "... signal_handle.i"
 	@echo "... signal_handle.s"
+	@echo "... task_scheduler.o"
+	@echo "... task_scheduler.i"
+	@echo "... task_scheduler.s"
 .PHONY : help
 
 

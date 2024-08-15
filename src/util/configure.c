@@ -6,7 +6,7 @@
 
 #define cth_default_ethernet		"eth0"
 #define cth_default_save_pcap_path	"./output.pcap"
-#define cth_default_log_output_path "./log/catch.log"
+#define cth_default_log_output_path NULL
 
 static char* ethernet = NULL;
 static char* save_pcap_path = NULL;

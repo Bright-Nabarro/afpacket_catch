@@ -34,5 +34,11 @@
   "command": "/usr/sbin/gcc -DDEBUG -I/home/lin17/workspace/contest/test/c/af_packet_catch/src/util/./include -I/home/lin17/workspace/contest/test/c/af_packet_catch/extern/lua/include -I/home/lin17/workspace/contest/test/c/af_packet_catch/extern/unix_sys/include -g -std=gnu11 -Wall -Wextra -o CMakeFiles/util.dir/signal_handle.c.o -c /home/lin17/workspace/contest/test/c/af_packet_catch/src/util/signal_handle.c",
   "file": "/home/lin17/workspace/contest/test/c/af_packet_catch/src/util/signal_handle.c",
   "output": "src/util/CMakeFiles/util.dir/signal_handle.c.o"
+},
+{
+  "directory": "/home/lin17/workspace/contest/test/c/af_packet_catch/build/src/util",
+  "command": "/usr/sbin/gcc -DDEBUG -I/home/lin17/workspace/contest/test/c/af_packet_catch/src/util/./include -I/home/lin17/workspace/contest/test/c/af_packet_catch/extern/lua/include -I/home/lin17/workspace/contest/test/c/af_packet_catch/extern/unix_sys/include -g -std=gnu11 -Wall -Wextra -o CMakeFiles/util.dir/task_scheduler.c.o -c /home/lin17/workspace/contest/test/c/af_packet_catch/src/util/task_scheduler.c",
+  "file": "/home/lin17/workspace/contest/test/c/af_packet_catch/src/util/task_scheduler.c",
+  "output": "src/util/CMakeFiles/util.dir/task_scheduler.c.o"
 }
 ]

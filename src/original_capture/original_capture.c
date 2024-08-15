@@ -261,6 +261,9 @@ static int original_main_loop(int sockfd)
 	struct sockaddr saddr;
 	socklen_t saddr_len = sizeof saddr;
 	char buf[CTH_MAX_BUF_SIZ];
+
+    cth_log(CTH_LOG_INFO, "start capturing");
+
 	while(true)
 	{
 		int numBytes = recvfrom(sockfd, buf, CTH_MAX_BUF_SIZ, 0, &saddr, &saddr_len);
