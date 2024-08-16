@@ -7,13 +7,13 @@
 },
 {
   "directory": "/home/lin17/workspace/contest/test/c/af_packet_catch/build/src/original_capture",
-  "command": "/usr/sbin/gcc -DDEBUG -I/home/lin17/workspace/contest/test/c/af_packet_catch/src/original_capture/./include -I/home/lin17/workspace/contest/test/c/af_packet_catch/src/util/include -g -std=gnu11 -Wall -Wextra -o CMakeFiles/original_capture.dir/original_capture.c.o -c /home/lin17/workspace/contest/test/c/af_packet_catch/src/original_capture/original_capture.c",
+  "command": "/usr/sbin/gcc -DDEBUG -I/home/lin17/workspace/contest/test/c/af_packet_catch/src/original_capture/./include -I/home/lin17/workspace/contest/test/c/af_packet_catch/src/util/include -I/home/lin17/workspace/contest/test/c/af_packet_catch/extern/lua/include -g -std=gnu11 -Wall -Wextra -o CMakeFiles/original_capture.dir/original_capture.c.o -c /home/lin17/workspace/contest/test/c/af_packet_catch/src/original_capture/original_capture.c",
   "file": "/home/lin17/workspace/contest/test/c/af_packet_catch/src/original_capture/original_capture.c",
   "output": "src/original_capture/CMakeFiles/original_capture.dir/original_capture.c.o"
 },
 {
   "directory": "/home/lin17/workspace/contest/test/c/af_packet_catch/build/src/original_capture",
-  "command": "/usr/sbin/gcc -DDEBUG -I/home/lin17/workspace/contest/test/c/af_packet_catch/src/original_capture/./include -I/home/lin17/workspace/contest/test/c/af_packet_catch/src/util/include -g -std=gnu11 -Wall -Wextra -o CMakeFiles/original_capture.dir/output.c.o -c /home/lin17/workspace/contest/test/c/af_packet_catch/src/original_capture/output.c",
+  "command": "/usr/sbin/gcc -DDEBUG -I/home/lin17/workspace/contest/test/c/af_packet_catch/src/original_capture/./include -I/home/lin17/workspace/contest/test/c/af_packet_catch/src/util/include -I/home/lin17/workspace/contest/test/c/af_packet_catch/extern/lua/include -g -std=gnu11 -Wall -Wextra -o CMakeFiles/original_capture.dir/output.c.o -c /home/lin17/workspace/contest/test/c/af_packet_catch/src/original_capture/output.c",
   "file": "/home/lin17/workspace/contest/test/c/af_packet_catch/src/original_capture/output.c",
   "output": "src/original_capture/CMakeFiles/original_capture.dir/output.c.o"
 },

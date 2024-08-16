@@ -94,6 +94,7 @@ app_EXTERNAL_OBJECTS =
 /home/lin17/workspace/contest/test/c/af_packet_catch/bin/app: src/main/CMakeFiles/app.dir/build.make
 /home/lin17/workspace/contest/test/c/af_packet_catch/bin/app: /home/lin17/workspace/contest/test/c/af_packet_catch/lib/liboriginal_capture.a
 /home/lin17/workspace/contest/test/c/af_packet_catch/bin/app: /home/lin17/workspace/contest/test/c/af_packet_catch/lib/libutil.a
+/home/lin17/workspace/contest/test/c/af_packet_catch/bin/app: /home/lin17/workspace/contest/test/c/af_packet_catch/extern/lua/lib/liblua.a
 /home/lin17/workspace/contest/test/c/af_packet_catch/bin/app: src/main/CMakeFiles/app.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/lin17/workspace/contest/test/c/af_packet_catch/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking C executable /home/lin17/workspace/contest/test/c/af_packet_catch/bin/app"
 	cd /home/lin17/workspace/contest/test/c/af_packet_catch/build/src/main && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/app.dir/link.txt --verbose=$(VERBOSE)

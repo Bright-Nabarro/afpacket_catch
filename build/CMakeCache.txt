@@ -199,7 +199,10 @@ af_packet_catch_IS_TOP_LEVEL:STATIC=ON
 af_packet_catch_SOURCE_DIR:STATIC=/home/lin17/workspace/contest/test/c/af_packet_catch
 
 //Dependencies for the target
-original_capture_LIB_DEPENDS:STATIC=general;util;general;lua;
+original_capture_LIB_DEPENDS:STATIC=general;util;general;/home/lin17/workspace/contest/test/c/af_packet_catch/extern/lua/lib/liblua.a;general;m;general;dl;
+
+//Dependencies for the target
+util_LIB_DEPENDS:STATIC=general;pthread;
 
 
 ########################
