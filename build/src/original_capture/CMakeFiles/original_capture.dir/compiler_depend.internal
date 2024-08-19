@@ -3,6 +3,10 @@
 
 src/original_capture/CMakeFiles/original_capture.dir/original_capture.c.o
  /home/lin17/workspace/contest/test/c/af_packet_catch/src/original_capture/original_capture.c
+ /home/lin17/workspace/contest/test/c/af_packet_catch/extern/lua/include/lauxlib.h
+ /home/lin17/workspace/contest/test/c/af_packet_catch/extern/lua/include/lua.h
+ /home/lin17/workspace/contest/test/c/af_packet_catch/extern/lua/include/luaconf.h
+ /home/lin17/workspace/contest/test/c/af_packet_catch/extern/lua/include/lualib.h
  /home/lin17/workspace/contest/test/c/af_packet_catch/src/original_capture/include/original_capture.h
  /home/lin17/workspace/contest/test/c/af_packet_catch/src/original_capture/include/output.h
  /home/lin17/workspace/contest/test/c/af_packet_catch/src/util/include/configure.h
@@ -121,7 +125,6 @@ src/original_capture/CMakeFiles/original_capture.dir/original_capture.c.o
  /usr/include/features.h
  /usr/include/gnu/stubs-64.h
  /usr/include/gnu/stubs.h
- /usr/include/lauxlib.h
  /usr/include/limits.h
  /usr/include/linux/bpf_common.h
  /usr/include/linux/byteorder/little_endian.h
@@ -139,9 +142,6 @@ src/original_capture/CMakeFiles/original_capture.dir/original_capture.c.o
  /usr/include/linux/stddef.h
  /usr/include/linux/swab.h
  /usr/include/linux/types.h
- /usr/include/lua.h
- /usr/include/luaconf.h
- /usr/include/lualib.h
  /usr/include/netinet/in.h
  /usr/include/signal.h
  /usr/include/stdc-predef.h

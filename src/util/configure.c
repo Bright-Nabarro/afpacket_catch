@@ -19,8 +19,9 @@ static char* bpf_argument = NULL;      //NULL即为默认值
 		if (value != NULL)                                                     \
 			free(value);                                                       \
 		size_t strLen = strlen(str);                                           \
-		value = malloc(strLen);                                                \
+		value = malloc(strLen + 1);                                            \
 		strncpy(value, str, strLen);                                           \
+		value[strLen] = '\0';                                                  \
 	} while (0)
 
 #define GET_TEMPLATE(value)                                                    \

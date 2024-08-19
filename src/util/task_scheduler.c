@@ -4,26 +4,13 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <logger.h>
 #include <signal.h>
 #include <errno.h>
 
-#define TASK_LOG(scheduler, logLevel, fmt, ...)                                \
-	do                                                                         \
-	{                                                                          \
-		if ((scheduler)->useLogger)                                            \
-		{                                                                      \
-			cth_log(logLevel, (fmt), ##__VA_ARGS__);                           \
-		}                                                                      \
-		else if ((logLevel) == CTH_LOG_ERROR || (logLevel) == CTH_LOG_FATAL)   \
-		{                                                                      \
-			fprintf(stderr, (fmt), ##__VA_ARGS__);                             \
-		}                                                                      \
-		else                                                                   \
-		{                                                                      \
-			fprintf(stdout, (fmt), ##__VA_ARGS__);                             \
-		}                                                                      \
-	} while (0)
+static int task_log_logger(enum CTH_LOG_LEVEL logLevel, const char* msg);
+static int task_log_logger_err (enum CTH_LOG_LEVEL logLevel, const char* funcName, int errCode);
+static int task_log_print(enum CTH_LOG_LEVEL logLevel, const char* msg);
+static int task_log_print_err (enum CTH_LOG_LEVEL logLevel, const char* funcName, int errCode);
 
 /*
  * 处理错误处理中的出错
@@ -48,35 +35,45 @@ CthTaskScheduler* cth_task_scheduler_init(bool useLogger, size_t queueSize)
     scheduler->queueSize = queueSize;
     scheduler->taskQueue = malloc(sizeof(CthTask) * queueSize);
     scheduler->shutdown = false;
-    scheduler->useLogger = useLogger;
     scheduler->addTaskWorking = ATOMIC_VAR_INIT(false);
     
+    if (useLogger)
+    {
+        scheduler->task_log = task_log_logger;
+        scheduler->task_log_err = task_log_logger_err;
+    }
+    else
+    {
+        scheduler->task_log = task_log_print;
+        scheduler->task_log_err = task_log_print_err;
+    }
+
 
     int ret;
     ret = pthread_mutex_init(&scheduler->queueMutex, NULL);
     if (ret != 0)
     {
-        TASK_LOG(scheduler, CTH_LOG_FATAL, "pthread_mutex_init error: %s", strerror(ret));
+        scheduler->task_log_err(CTH_LOG_FATAL, "pthread_mutex_init", ret);
         return NULL;
     }
 
     ret = pthread_cond_init(&scheduler->condQueueEmpty, NULL);
     if (ret != 0)
     {
-        TASK_LOG(scheduler, CTH_LOG_FATAL, "pthread_cond_init error: %s", strerror(ret));
+        scheduler->task_log_err(CTH_LOG_FATAL, "pthread_cond_init", ret);
         goto clean_mutex;
     }
     ret = pthread_cond_init(&scheduler->condQueueFull, NULL);
     if (ret)
     {
-        TASK_LOG(scheduler, CTH_LOG_FATAL, "pthread_cond_init error: %s", strerror(ret));
+        scheduler->task_log_err(CTH_LOG_FATAL, "pthread_cond_init error", ret);
         goto clean_cond_empty;
     }
 
     ret = pthread_create(&scheduler->managerThread, NULL, cth_task_scheduler_manager, scheduler);
     if (ret != 0)
     {
-        TASK_LOG(scheduler, CTH_LOG_FATAL, "pthread_create error: %s", strerror(ret));
+        scheduler->task_log_err(CTH_LOG_FATAL, "pthread_create", ret);
         goto clean_cond_full;
     }
 
@@ -111,7 +108,10 @@ typedef struct
     void* arg;
 }CthTaskSchedulerAddTaskArgs;
 
-/* 需要优化 */
+/*
+ * 需要优化线程添加逻辑
+ * void* arg 依赖线程函数销毁
+ */
 int cth_task_scheduler_add(CthTaskScheduler* scheduler, void(*func)(void*), void* arg)
 {
     pthread_t addTaskThread;
@@ -127,14 +127,14 @@ int cth_task_scheduler_add(CthTaskScheduler* scheduler, void(*func)(void*), void
     ret = pthread_create(&addTaskThread, NULL, cth_task_scheduler_add_task, args);
     if (ret != 0)
     {
-        TASK_LOG(scheduler, CTH_LOG_FATAL, "pthread_create error: %s", strerror(ret));
+        scheduler->task_log_err(CTH_LOG_FATAL, "pthread_create", ret);
         return -1;
     }
 
     ret = pthread_detach(addTaskThread);
     if (ret != 0)
     {
-        TASK_LOG(scheduler, CTH_LOG_FATAL, "pthread_detach error: %s", strerror(ret));
+        scheduler->task_log_err(CTH_LOG_FATAL, "pthread_detach", ret);
         ret = pthread_cancel(addTaskThread);
         if (ret != 0)
         {
@@ -160,43 +160,43 @@ int cth_task_scheduler_destroy(CthTaskScheduler* scheduler)
     ret = pthread_mutex_lock(&scheduler->queueMutex);
     if (ret)
     {
-        TASK_LOG(scheduler, CTH_LOG_FATAL, "pthread_mutex_lock error: %s", strerror(ret));
+        scheduler->task_log_err(CTH_LOG_FATAL, "pthread_mutex_lock", ret);
     }
     ret = pthread_cond_broadcast(&scheduler->condQueueEmpty);
     if (ret)
     {
-        TASK_LOG(scheduler, CTH_LOG_FATAL, "pthread_cond_broadcast error: %s", strerror(ret));
+        scheduler->task_log_err(CTH_LOG_FATAL, "pthread_cond_broadcast", ret);
     }
     ret = pthread_mutex_unlock(&scheduler->queueMutex);
     if (ret)
     {
-        TASK_LOG(scheduler, CTH_LOG_FATAL, "pthread_mutex_unlock error: %s", strerror(ret));
+        scheduler->task_log_err(CTH_LOG_FATAL, "pthread_mutex_unlock", ret);
     }
 
     ret = pthread_join(scheduler->managerThread, (void**)&managerRet);
     if (ret)
     {
-        TASK_LOG(scheduler, CTH_LOG_FATAL, "pthread_join error: %s", strerror(ret));
+        scheduler->task_log_err(CTH_LOG_FATAL, "pthread_join", ret);
     }
     ret = pthread_cond_destroy(&scheduler->condQueueFull);
     if (ret)
     {
-        TASK_LOG(scheduler, CTH_LOG_FATAL, "pthread_cond_destory error: %s", strerror(ret));
+        scheduler->task_log_err(CTH_LOG_FATAL, "pthread_cond_destory", ret);
     }
     ret = pthread_cond_destroy(&scheduler->condQueueEmpty);
     if (ret)
     {
-        TASK_LOG(scheduler, CTH_LOG_FATAL, "pthread_cond_destroy error: %s", strerror(ret));
+        scheduler->task_log_err(CTH_LOG_FATAL, "pthread_cond_destroy", ret);
     }
     ret = pthread_mutex_destroy(&scheduler->queueMutex);
     if (ret)
     {
-        TASK_LOG(scheduler, CTH_LOG_FATAL, "pthread_mutex_destroy error: %s", strerror(ret));
+        scheduler->task_log_err(CTH_LOG_FATAL, "pthread_mutex_destroy", ret);
         return -1;
     }
     if (!cth_scheduler_queue_empty(scheduler))
     {
-        TASK_LOG(scheduler, CTH_LOG_FATAL, "scheduler task queue not empty, may be logic error");
+        scheduler->task_log(CTH_LOG_FATAL, "schedulert empty, logic error");
     }
     free(scheduler->taskQueue);
     free(scheduler);
@@ -239,7 +239,7 @@ static void* cth_task_scheduler_manager(void* arg)
         ret = pthread_mutex_lock(&scheduler->queueMutex);
         if (ret)
         {
-            TASK_LOG(scheduler, CTH_LOG_FATAL, "pthread_mutex_lock error: %s", strerror(ret));
+            scheduler->task_log_err(CTH_LOG_FATAL, "pthread_mutex_lock", ret);
             _exit(1);
         }
         
@@ -252,7 +252,7 @@ static void* cth_task_scheduler_manager(void* arg)
                 ret = pthread_mutex_unlock(&scheduler->queueMutex);
                 if (ret)
                 {
-                    TASK_LOG(scheduler, CTH_LOG_FATAL, "pthread_mutex_unlock error: %s", strerror(ret));
+                    scheduler->task_log_err(CTH_LOG_FATAL, "pthread_mutex_unlock", ret);
                     _exit(1);
                 }
                 return NULL;
@@ -261,7 +261,7 @@ static void* cth_task_scheduler_manager(void* arg)
             ret = pthread_cond_wait(&scheduler->condQueueEmpty, &scheduler->queueMutex);
             if (ret)
             {
-                TASK_LOG(scheduler, CTH_LOG_FATAL, "pthread_cond_wait error: %s", strerror(ret));
+                scheduler->task_log_err(CTH_LOG_FATAL, "pthread_cond_wait", ret);
                 _exit(1);
             }
         }
@@ -283,14 +283,14 @@ static void* cth_task_scheduler_manager(void* arg)
         ret = pthread_cond_signal(&scheduler->condQueueFull);
         if (ret)
         {
-            TASK_LOG(scheduler, CTH_LOG_FATAL, "pthread_cond_signal error: %s", strerror(ret));
+            scheduler->task_log_err(CTH_LOG_FATAL, "pthread_cond_signal", ret);
             _exit(1);
         }
 
         ret = pthread_mutex_unlock(&scheduler->queueMutex);
         if (ret)
         {
-            TASK_LOG(scheduler, CTH_LOG_FATAL, "pthread_mutex_unlock error: %s", strerror(ret));
+            scheduler->task_log_err(CTH_LOG_FATAL, "pthread_mutex_unlock", ret);
             _exit(1);
         }
 
@@ -334,7 +334,7 @@ static void* cth_task_scheduler_add_task(void* arg)
     ret = pthread_mutex_lock(&scheduler->queueMutex);
     if (ret)
     {
-        TASK_LOG(scheduler, CTH_LOG_FATAL, "pthread_mutex_lock error: %s", strerror(ret));
+        scheduler->task_log_err(CTH_LOG_FATAL, "pthread_mutex_lock", ret);
         _exit(1);
     }
     
@@ -343,7 +343,7 @@ static void* cth_task_scheduler_add_task(void* arg)
         ret = pthread_cond_wait(&scheduler->condQueueFull, &scheduler->queueMutex);
         if (ret)
         {
-            TASK_LOG(scheduler, CTH_LOG_FATAL, "pthread_cond_wait error: %s", strerror(ret));
+            scheduler->task_log_err(CTH_LOG_FATAL, "pthread_cond_wait", ret);
             _exit(1);
         }
     }
@@ -356,19 +356,51 @@ static void* cth_task_scheduler_add_task(void* arg)
     ret = pthread_cond_signal(&scheduler->condQueueEmpty);
     if (ret)
     {
-        TASK_LOG(scheduler, CTH_LOG_FATAL, "pthread_cond_signal error: %s", strerror(ret));
+        scheduler->task_log_err(CTH_LOG_FATAL, "pthread_cond_signal", ret);
         _exit(1);
     }
 
     ret = pthread_mutex_unlock(&scheduler->queueMutex);
     if (ret)
     {
-        TASK_LOG(scheduler, CTH_LOG_FATAL, "pthread_mutex_destroy error: %s", strerror(ret));
+        scheduler->task_log_err(CTH_LOG_FATAL, "pthread_mutex_destroy", ret);
         _exit(1);
     }
 
     atomic_store(&scheduler->addTaskWorking, false);
     
     return NULL;
+}
+
+static int task_log_logger(enum CTH_LOG_LEVEL logLevel, const char* msg)
+{
+    if (cth_log(logLevel, msg) < 0)
+    {
+        fprintf(stderr, "cth_log error\n");
+        return -1;
+    }
+    return 0;
+}
+
+static int task_log_logger_err (enum CTH_LOG_LEVEL logLevel, const char* funcName, int errCode)
+{
+    if (cth_log_errcode(logLevel, funcName, errCode))
+    {
+        fprintf(stderr, "cth_log_err error\n");
+        return -1;
+    }
+    return 0;
+}
+
+static int task_log_print(enum CTH_LOG_LEVEL logLevel, const char* msg)
+{
+    printf("[%s] %s", log_level_to_string(logLevel), msg);
+    return 0;
+}
+
+static int task_log_print_err (enum CTH_LOG_LEVEL logLevel, const char* funcName, int errCode)
+{
+    printf("[%s] %s error: %s", log_level_to_string(logLevel), funcName, strerror(errCode));
+    return 0;
 }
 

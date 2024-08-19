@@ -2,7 +2,7 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdatomic.h>
-
+#include <logger.h>
 
 typedef struct
 {
@@ -17,8 +17,6 @@ typedef struct
  */
 typedef struct
 {
-    bool useLogger;
-
     CthTask** taskQueue;
     size_t queueSize;
     size_t queueHead;
@@ -33,6 +31,9 @@ typedef struct
     //atomic_int except;
     bool shutdown;
     atomic_bool addTaskWorking;
+
+    int (*task_log)(enum CTH_LOG_LEVEL logLevel, const char* msg);
+    int (*task_log_err)(enum CTH_LOG_LEVEL logLevel, const char* funcName, int errCode);
 } CthTaskScheduler;
 
 /* return NULL if error */
@@ -43,3 +44,4 @@ int cth_task_scheduler_add(CthTaskScheduler* manager, void(*func)(void*), void* 
 int cth_task_scheduler_destroy(CthTaskScheduler* manager);
 
 bool cth_scheduler_queue_empty(const CthTaskScheduler* scheduler);
+

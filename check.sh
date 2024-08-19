@@ -1,3 +1,8 @@
 #!/usr/bin/env bash
 
-valgrind --tool=memcheck --leak-check=full ./bin/app
+sudo -E valgrind \
+    --tool=memcheck \
+    --leak-check=full \
+    --show-leak-kinds=all \
+    ./bin/app -e eth0 -w ./output/catch.pcap
+

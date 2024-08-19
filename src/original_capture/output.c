@@ -89,7 +89,7 @@ int initial_pcap_file(const char* path)
     output_file = fopen(path, "wb");
     if (!output_file) 
     {
-        cth_log_err(CTH_LOG_FATAL, "fopen", errno);
+        cth_log_errcode(CTH_LOG_FATAL, "fopen", errno);
         return -1;
     }
 

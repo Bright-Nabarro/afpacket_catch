@@ -13,15 +13,16 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-//in extern
-#include "lua.h"
+// in extern
 #include "lauxlib.h"
+#include "lua.h"
 #include "lualib.h"
 
-#include "logger.h"
+// in util
 #include "configure.h"
-#include "signal_handle.h"
+#include "logger.h"
 #include "output.h"
+#include "signal_handle.h"
 
 /*
  * 绑定到指定接口, 如果出错全部返回-1
@@ -29,14 +30,16 @@
 static int bind_socket_eth(int sockfd, const char* ethName, struct ifreq* p_ifr)
 {
 	memset(p_ifr, 0, sizeof(struct ifreq));
-	strncpy(p_ifr->ifr_name, ethName, IFNAMSIZ -1);
+    
+    size_t strLen = strlen(ethName);
+	strncpy(p_ifr->ifr_name, ethName, strLen < IFNAMSIZ-1 ? strLen : IFNAMSIZ -1);
 	//获取网络接口索引
 	if (ioctl(sockfd, SIOCGIFINDEX, p_ifr) < 0)
 	{
-		cth_log_err(CTH_LOG_ERROR, "ioctl", errno);
+		cth_log_errcode(CTH_LOG_ERROR, "ioctl", errno);
 		return -1;
 	}
-	cth_log(CTH_LOG_STATUS, "eth bind index: %d", p_ifr->ifr_ifindex);
+	cth_log_digit(CTH_LOG_STATUS, "eth bind index: %d", p_ifr->ifr_ifindex);
 
 	//链路层套接字
 	struct sockaddr_ll sll;
@@ -48,7 +51,7 @@ static int bind_socket_eth(int sockfd, const char* ethName, struct ifreq* p_ifr)
 	//绑定
 	if (bind(sockfd, (struct sockaddr*)&sll, sizeof(sll)) < 0)
 	{
-		cth_log_err(CTH_LOG_ERROR, "bind", errno);
+		cth_log_errcode(CTH_LOG_ERROR, "bind", errno);
 		return -1;
 	}
 
@@ -75,7 +78,7 @@ static int set_bpf_code(struct sock_filter* bpfCode, size_t idx, const char* key
     }
     else
     {
-        cth_log(CTH_LOG_ERROR, "unexcepted key: %s", key);
+        cth_log_str(CTH_LOG_ERROR, "unexcepted key: %s", key);
         return -1;
     }
     return 0;
@@ -95,7 +98,7 @@ static int set_socket_filter(int sockfd, const char* bpfarg)
 
     if (luaL_dofile(L, "script/get_bpf_filter.lua") != LUA_OK)
     {
-        cth_log(CTH_LOG_ERROR, "loading lua script error: %s", lua_tostring(L, -1));
+        cth_log_errmsg(CTH_LOG_ERROR, "loading lua script error: %s", lua_tostring(L, -1));
         goto err;
     }
 
@@ -113,7 +116,7 @@ static int set_socket_filter(int sockfd, const char* bpfarg)
     //函数完成后返回值在栈顶
     if (lua_pcall(L, 1, 1, 0) != LUA_OK)
     {
-        cth_log(CTH_LOG_ERROR, "lua_pcall error: %s", lua_tostring(L, -1));
+        cth_log_errmsg(CTH_LOG_ERROR, "lua_pcall error: %s", lua_tostring(L, -1));
         goto err;
     }
 
@@ -182,7 +185,7 @@ static int set_socket_filter(int sockfd, const char* bpfarg)
     filter.filter = bpfCode;
     if (setsockopt(sockfd, SOL_SOCKET, SO_ATTACH_FILTER, &filter, sizeof filter) < 0)
     {
-        cth_log_err(CTH_LOG_ERROR, "setsockopt", errno);
+        cth_log_errcode(CTH_LOG_ERROR, "setsockopt", errno);
         goto err;
     }
 
@@ -202,7 +205,7 @@ int get_original_socket(int* p_sockfd, const char* ethName)
 	*p_sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	if (*p_sockfd < 0)
 	{
-		cth_log_err(CTH_LOG_FATAL, "socket", errno);
+		cth_log_errcode(CTH_LOG_FATAL, "socket", errno);
 		p_sockfd = NULL;
 		return CTH_SOCKET_ERR;
 	}
@@ -211,7 +214,7 @@ int get_original_socket(int* p_sockfd, const char* ethName)
 	struct ifreq ifr;
 	if (ethName == NULL || bind_socket_eth(*p_sockfd, ethName, &ifr) < 0)
 	{
-		cth_log(CTH_LOG_ERROR, "binad_socket_eth error");
+		cth_log(CTH_LOG_ERROR, "bind_socket_eth error");
 		ret |= CTH_BIND_ERR;
 	}
 
@@ -223,7 +226,7 @@ int get_original_socket(int* p_sockfd, const char* ethName)
     if (setsockopt(*p_sockfd, SOL_PACKET, PACKET_ADD_MEMBERSHIP,
 				&mreq, sizeof mreq) < 0)
 	{
-		cth_log_err(CTH_LOG_ERROR, "setsockopt", errno);
+		cth_log_errcode(CTH_LOG_ERROR, "setsockopt", errno);
 		ret |= CTH_SETMIX_MODE_ERR;
 	}
     else
@@ -281,7 +284,7 @@ static int original_main_loop(int sockfd)
 			break;
 		if (numBytes < 0)
 		{
-			cth_log_err(CTH_LOG_ERROR, "recvfrom", errno);
+			cth_log_errcode(CTH_LOG_ERROR, "recvfrom", errno);
 			goto loop_continue;
 		}
 
@@ -296,14 +299,15 @@ loop_continue:
 		}
 	}
 	
-	cth_log(CTH_LOG_INFO, "Captured %d packets", counter);
+	cth_log_digit(CTH_LOG_INFO, "Captured %d packets", counter);
 	return 0;
 }
 
 int original_main()
 {
 	int sockfd = 0;
-	int status = get_original_socket(&sockfd, get_ethernet());
+    const char* ethName = get_ethernet();
+	int status = get_original_socket(&sockfd, ethName);
 	if (status & CTH_SOCKET_ERR)
 	{
 		cth_log(CTH_LOG_FATAL, "cannot open sockfd, exit");
@@ -324,6 +328,7 @@ int original_main()
 
 	original_main_loop(sockfd);
 
+    close(sockfd);
 	close_pcap_file();
 	return 0;
 

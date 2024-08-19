@@ -12,9 +12,12 @@ enum CTH_LOG_LEVEL{
 int cth_log_init();
 void cth_log_close();
 
-void cth_log(enum CTH_LOG_LEVEL logLevel, const char* fmt, ...);
-
-void cth_log_err(enum CTH_LOG_LEVEL logLevel, const char* msg, int errcode);
+int cth_log(enum CTH_LOG_LEVEL logLevel, const char* msg);
+int cth_log_digit(enum CTH_LOG_LEVEL logLevel, const char* fmt, int digit);
+int cth_log_str(enum CTH_LOG_LEVEL logLevel, const char* fmt, const char* msg);
+int cth_log_errcode(enum CTH_LOG_LEVEL logLevel, const char* funcName, int errcode);
+int cth_log_errmsg(enum CTH_LOG_LEVEL logLevel, const char* funcName, const char* msg);
 
 const char* log_level_to_string(enum CTH_LOG_LEVEL logLevel);
+
 

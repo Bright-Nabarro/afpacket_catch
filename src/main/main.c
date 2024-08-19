@@ -43,7 +43,7 @@ static int parse_main_args(int argc, char* argv[])
             set_bpf_argument(optarg);
             break;
 		case '?':
-            cth_log(CTH_LOG_ERROR, "excepted main argument %c", optopt);
+            cth_log_digit(CTH_LOG_ERROR, "excepted main argument %c", optopt);
             break;
 		default:
             cth_log(CTH_LOG_FATAL, "unprocessed argument");
@@ -71,10 +71,8 @@ int main(int argc, char* argv[])
         return -1;
     }
     
-    //可能在log添加线程时，main线程抢先执行close操作，将bool标记为true,
-    //然后manager判断工作结束，导致不能正常写入
-    cth_log(CTH_LOG_INFO, "testing");
     cth_log_close();
+    release_config();
     return 0;
 }
 

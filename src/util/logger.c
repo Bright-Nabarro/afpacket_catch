@@ -10,20 +10,43 @@
 
 #define CTH_LOG_QUE_SIZ 10
 
-static CthTaskScheduler* scheduler = NULL;
+#define INVOKE_CTH_LOG_REGISTER_SCHEDULER(logType, logLevel, strdata1,         \
+										  strdata2, digit)                     \
+	do                                                                         \
+	{                                                                          \
+		if (cth_log_register_scheduler(logType, logLevel, strdata1, strdata2,  \
+									   digit))                                 \
+		{                                                                      \
+			fprintf(stderr, "cth_log_register_scheduler error\n");             \
+			return -1;                                                         \
+		}                                                                      \
+	} while (0)
 
 static void cth_log_callback(void* args);
 
+static CthTaskScheduler* scheduler = NULL;
 static FILE* logFile;
 
 typedef struct
 {
     FILE* file;
     enum CTH_LOG_LEVEL logLevel;
-    const char * fmt;
-    va_list args;
+    enum CTH_LOG_TYPE{
+        CTH_LOG_NORMAL_MSG,         //[%s] %s
+        CTH_LOG_FMT_DIGITAL,        //[%s] fmt, digit
+        CTH_LOG_FMT_STR,            //[%s] fmt, str
+        CTH_LOG_ERROR_CODE,         //[%s] %s error: %s, *, *, strerror(errCode)
+        CTH_LOG_ERROR_MSG,          //[%s] %s error: %s
+    } logType;
+    
+    const char* strdata1;
+    const char* strdata2;
+    int digit;
+
 } CthLogThdFuncArgs;
 
+static int cth_log_register_scheduler(enum CTH_LOG_TYPE, enum CTH_LOG_LEVEL logLevel, 
+        const char* strdata1, const char* strdata2, int digit);
 
 int cth_log_init()
 {
@@ -79,29 +102,35 @@ const char* log_level_to_string(enum CTH_LOG_LEVEL logLevel)
 	#undef CASE_STR
 }
 
-void cth_log(enum CTH_LOG_LEVEL logLevel, const char* fmt, ...)
+
+int cth_log(enum CTH_LOG_LEVEL logLevel, const char* msg)
 {
-	va_list args;
-
-    CthLogThdFuncArgs* funcArgs = malloc(sizeof(CthLogThdFuncArgs));
-    assert(logFile != NULL);
-    funcArgs->file = logFile;
-    funcArgs->logLevel = logLevel;
-    funcArgs->fmt = fmt;
-	va_start(args, fmt);
-    va_copy(funcArgs->args, args);
-
-    if(cth_task_scheduler_add(scheduler, cth_log_callback, funcArgs))
-    {
-        fprintf(stderr, "cth_task_scheduler_add error\n");
-    }
-
-	va_end(args);
+    INVOKE_CTH_LOG_REGISTER_SCHEDULER(CTH_LOG_NORMAL_MSG, logLevel, msg, NULL, 0);
+    return 0;
 }
 
-void cth_log_err(enum CTH_LOG_LEVEL logLevel, const char* msg, int errcode)
+int cth_log_digit(enum CTH_LOG_LEVEL logLevel, const char* fmt, int digit)
 {
-	cth_log(logLevel, "%s error: %s", msg, strerror(errcode));
+    INVOKE_CTH_LOG_REGISTER_SCHEDULER(CTH_LOG_FMT_DIGITAL, logLevel, fmt, NULL, digit);
+    return 0;
+}
+
+int cth_log_str(enum CTH_LOG_LEVEL logLevel, const char* fmt, const char* msg)
+{
+    INVOKE_CTH_LOG_REGISTER_SCHEDULER(CTH_LOG_FMT_DIGITAL, logLevel, fmt, msg, 0);
+    return 0;
+}
+
+int cth_log_errcode(enum CTH_LOG_LEVEL logLevel, const char* funcName, int errcode)
+{
+    INVOKE_CTH_LOG_REGISTER_SCHEDULER(CTH_LOG_ERROR_CODE, logLevel, funcName, NULL, errcode);
+    return 0;
+}
+
+int cth_log_errmsg(enum CTH_LOG_LEVEL logLevel, const char* funcName, const char* msg)
+{
+    INVOKE_CTH_LOG_REGISTER_SCHEDULER(CTH_LOG_ERROR_CODE, logLevel, funcName, msg, 0);
+    return 0;
 }
 
 //在线程管理中自动释放参数
@@ -110,8 +139,49 @@ static void cth_log_callback(void* args)
     CthLogThdFuncArgs* thdArgs = args;
     FILE* file = thdArgs->file;
  	fprintf(file, "[%s]  ", log_level_to_string(thdArgs->logLevel));
-	vfprintf(file, thdArgs->fmt, thdArgs->args);
-	fprintf(file, "\n");
-    va_end(thdArgs->args);
+    
+    switch(thdArgs->logType)
+    {
+    case CTH_LOG_NORMAL_MSG:
+        fprintf(file, "%s", thdArgs->strdata1);
+        break;
+    case CTH_LOG_FMT_DIGITAL:
+        fprintf(file, thdArgs->strdata1, thdArgs->digit);
+        break;
+    case CTH_LOG_FMT_STR:
+        fprintf(file, thdArgs->strdata1, thdArgs->strdata2);
+    case CTH_LOG_ERROR_CODE:
+        fprintf(file, "%s error: %s", thdArgs->strdata1, strerror(thdArgs->digit));
+        break;
+    case CTH_LOG_ERROR_MSG:
+        fprintf(file, "%s error: %s", thdArgs->strdata1, thdArgs->strdata2);
+        break;
+    default:
+        fprintf(stderr, "except logType in cth_log_callback\n");
+        return;
+    }
+    fprintf(file, "\n");
+}
+
+static int cth_log_register_scheduler(enum CTH_LOG_TYPE logType, enum CTH_LOG_LEVEL logLevel, 
+        const char* strdata1, const char* strdata2, int digit)
+{
+    CthLogThdFuncArgs* args = malloc(sizeof(CthLogThdFuncArgs));
+
+    args->file = logFile;
+    args->logLevel = logLevel;
+    args->logType = logType;
+    args->strdata1 = strdata1;
+    args->strdata2 = strdata2;
+    args->digit = digit;
+    
+    if (cth_task_scheduler_add(scheduler, cth_log_callback, args) < 0)
+    {
+        fprintf(stderr, "cth_task_scheduler_add error\n");
+        free(args);
+        return -1;
+    }
+
+    return 0;
 }
 
