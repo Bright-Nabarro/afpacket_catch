@@ -52,6 +52,12 @@ src/original_capture/CMakeFiles/original_capture.dir/original_capture.c.o
  /usr/include/bits/libc-header-start.h
  /usr/include/bits/local_lim.h
  /usr/include/bits/long-double.h
+ /usr/include/bits/mman-linux.h
+ /usr/include/bits/mman-map-flags-generic.h
+ /usr/include/bits/mman-shared.h
+ /usr/include/bits/mman.h
+ /usr/include/bits/mman_ext.h
+ /usr/include/bits/poll.h
  /usr/include/bits/posix1_lim.h
  /usr/include/bits/posix2_lim.h
  /usr/include/bits/posix_opt.h
@@ -143,6 +149,7 @@ src/original_capture/CMakeFiles/original_capture.dir/original_capture.c.o
  /usr/include/linux/swab.h
  /usr/include/linux/types.h
  /usr/include/netinet/in.h
+ /usr/include/poll.h
  /usr/include/signal.h
  /usr/include/stdc-predef.h
  /usr/include/stdint.h
@@ -152,6 +159,8 @@ src/original_capture/CMakeFiles/original_capture.dir/original_capture.c.o
  /usr/include/strings.h
  /usr/include/sys/cdefs.h
  /usr/include/sys/ioctl.h
+ /usr/include/sys/mman.h
+ /usr/include/sys/poll.h
  /usr/include/sys/select.h
  /usr/include/sys/socket.h
  /usr/include/sys/ttydefaults.h

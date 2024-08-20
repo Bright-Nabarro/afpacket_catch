@@ -6,10 +6,12 @@
 #include <linux/if.h>
 #include <linux/if_ether.h>
 #include <linux/if_packet.h>
+#include <poll.h> //仅仅用于触发事件检测
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -24,6 +26,7 @@
 #include "output.h"
 #include "signal_handle.h"
 
+static struct tpacket_req tpReq;
 /*
  * 绑定到指定接口, 如果出错全部返回-1
  */
@@ -199,6 +202,7 @@ err:
     return -1;
 }
 
+//配置最后PACKET环形区域时开始捕获
 int get_original_socket(int* p_sockfd, const char* ethName)
 {
 	int ret = CTH_SUCCESS;
@@ -253,54 +257,116 @@ int get_original_socket(int* p_sockfd, const char* ethName)
         cth_log(CTH_LOG_STATUS, "filter unset, use default");
     }
 
+    //添加环形区域
+    //设置版本
+    int tpacket_version = TPACKET_V1;
+    if (setsockopt(*p_sockfd, SOL_PACKET, PACKET_VERSION, &tpacket_version, sizeof(int)) < 0)
+    {
+        cth_log_errcode(CTH_LOG_ERROR, "setsockopt", errno);
+        ret |= CTH_SET_PACVER_ERR;
+        goto pass;
+    }
+
+    //暂时使用固定值，后序添加配置读取
+    tpReq.tp_block_size = get_tp_block_size();
+    tpReq.tp_block_nr = get_tp_block_nr();
+    tpReq.tp_frame_size = get_tp_frame_size();
+    tpReq.tp_frame_nr = get_tp_frame_nr();
+    
+    if (setsockopt(*p_sockfd, SOL_PACKET, PACKET_RX_RING, (void*)&tpReq, sizeof tpReq) < 0)
+    {
+        cth_log_errcode(CTH_LOG_ERROR, "setsockopt", errno);
+        ret |= CTH_SET_PACKET_RING_ERR;
+    }
+
+pass:
 	return ret;
+}
+
+/*
+ *  出错返回NULL
+ */
+static void* set_packet_ring(int sockfd)
+{
+    size_t bufferLen = tpReq.tp_block_size * tpReq.tp_block_nr;
+    void* mmapArea = mmap(NULL, bufferLen, PROT_READ | PROT_WRITE, MAP_SHARED, sockfd, 0);
+    if (mmapArea == MAP_FAILED)
+    {
+        cth_log_errcode(CTH_LOG_FATAL, "mmap", errno);
+        goto err;
+    }
+    memset(mmapArea, 0, bufferLen);
+
+    return mmapArea;
+err:
+    return NULL;
 }
 
 static int original_main_loop(int sockfd)
 {
-    
     size_t counter = 0;
 
-	struct sockaddr saddr;
-	socklen_t saddr_len = sizeof saddr;
-	char buf[CTH_MAX_BUF_SIZ];
+    void* mmapArea = set_packet_ring(sockfd);
+    if (mmapArea == NULL)
+    {
+        cth_log(CTH_LOG_FATAL, "set_packet_ring error");
+        return -1;
+    }
 
+    struct pollfd pfd;
+    pfd.fd = sockfd;
+    pfd.events = POLLIN;
     cth_log(CTH_LOG_INFO, "start capturing");
 
-	while(true)
-	{
-		int numBytes = recvfrom(sockfd, buf, CTH_MAX_BUF_SIZ, 0, &saddr, &saddr_len);
-		PrevState state;
-		if (block_sig(&state, SIGINT))
-		{
-			cth_log(CTH_LOG_FATAL, "block_sig");
-			return -1;
-		}
+    size_t index = 0;
+    while (true)
+    {
+        struct tpacket_hdr* hdr = (struct tpacket_hdr*)(mmapArea + index * tpReq.tp_frame_size);
+        
+        if ((hdr->tp_status & TP_STATUS_USER) != TP_STATUS_USER)
+        {
+            if (poll(&pfd, 1, -1) < 0)
+            {
+                if (errno == EINTR)
+                    break;
+                cth_log_errcode(CTH_LOG_FATAL, "poll", errno);
+                return -1;
+            }
+            continue;
+        }
 
-		if (g_recSigint)
-			break;
-		
-		if (errno == EINTR)
-			break;
-		if (numBytes < 0)
-		{
-			cth_log_errcode(CTH_LOG_ERROR, "recvfrom", errno);
-			goto loop_continue;
-		}
+        //屏蔽ctrl c
+        PrevState state;
+        if (block_sig(&state, SIGINT))
+        {
+            cth_log(CTH_LOG_FATAL, "block_sig");
+            return -1;
+        }
+        //--
 
-		++counter;
-		output_pcap_packet(buf, numBytes);
+        if (g_recSigint)
+            break;
 
-loop_continue:
-		if (recover_sig(&state) < 0)
-		{
-			cth_log(CTH_LOG_FATAL, "recover_sig error");
-			return -1;
-		}
-	}
-	
-	cth_log_digit(CTH_LOG_INFO, "Captured %d packets", counter);
-	return 0;
+        if (errno == EINTR)
+            break;
+
+        hdr->tp_status = TP_STATUS_KERNEL;
+        //内核设置了PACKET环后不会回写
+        index = (index + 1) % tpReq.tp_frame_nr;
+        ++counter;
+        output_pcap_packet((char*)hdr + hdr->tp_mac, hdr->tp_len);
+
+        //恢复ctrlc
+        if (recover_sig(&state) < 0)
+        {
+            cth_log(CTH_LOG_FATAL, "recover_sig error");
+            return -1;
+        }
+        //--
+    }
+
+    cth_log_digit(CTH_LOG_INFO, "Captured %d packets", counter);
+    return 0;
 }
 
 int original_main()

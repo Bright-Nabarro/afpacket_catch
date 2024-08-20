@@ -13,4 +13,3 @@
 11. `task_scheduler`最后的`shut_down`非原子
 12. `logger.c: cth_log_callback` 需添加异常处理和fmt检查，并且更改接口
 13. `logger.h` 接口仍然需要简化，考虑使用单个的格式化字符和`void*` 或 `void*`数组
-

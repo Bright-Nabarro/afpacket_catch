@@ -65,10 +65,14 @@ src/original_capture/CMakeFiles/original_capture.dir/original_capture.c.o: \
  /usr/include/asm-generic/ioctls.h /usr/include/linux/ioctl.h \
  /usr/include/asm/ioctl.h /usr/include/asm-generic/ioctl.h \
  /usr/include/bits/ioctl-types.h /usr/include/sys/ttydefaults.h \
- /usr/include/unistd.h /usr/include/bits/posix_opt.h \
- /usr/include/bits/environments.h /usr/include/bits/confname.h \
- /usr/include/bits/getopt_posix.h /usr/include/bits/getopt_core.h \
- /usr/include/bits/unistd_ext.h \
+ /usr/include/sys/mman.h /usr/include/bits/mman.h \
+ /usr/include/bits/mman-map-flags-generic.h \
+ /usr/include/bits/mman-linux.h /usr/include/bits/mman-shared.h \
+ /usr/include/bits/mman_ext.h /usr/include/unistd.h \
+ /usr/include/bits/posix_opt.h /usr/include/bits/environments.h \
+ /usr/include/bits/confname.h /usr/include/bits/getopt_posix.h \
+ /usr/include/bits/getopt_core.h /usr/include/bits/unistd_ext.h \
+ /usr/include/poll.h /usr/include/sys/poll.h /usr/include/bits/poll.h \
  /home/lin17/workspace/contest/test/c/af_packet_catch/extern/lua/include/lauxlib.h \
  /usr/include/stdio.h \
  /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include/stdarg.h \
