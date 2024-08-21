@@ -6,7 +6,7 @@
 #include <linux/if.h>
 #include <linux/if_ether.h>
 #include <linux/if_packet.h>
-#include <poll.h> //仅仅用于触发事件检测
+#include <poll.h>       //仅仅用于触发事件检测
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +14,7 @@
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <pthread.h>
 
 // in extern
 #include "lauxlib.h"
@@ -26,8 +27,12 @@
 #include "output.h"
 #include "signal_handle.h"
 
-static struct tpacket_req tpReq;
+#define RETIRE_BLK_TOV 100
+
+static struct tpacket_req3 tpReq;
 static size_t MmapBufferLen;
+
+
 /*
  * 绑定到指定接口, 如果出错全部返回-1
  */
@@ -148,7 +153,6 @@ static int set_socket_filter(int sockfd, const char* bpfarg)
         goto err;
     }
 
-    
     //确保从表头开始遍历
     lua_pushnil(L);
     //table的位置在栈顶之下
@@ -260,7 +264,7 @@ int get_original_socket(int* p_sockfd, const char* ethName)
 
     //添加环形区域
     //设置版本
-    int tpacket_version = TPACKET_V1;
+    int tpacket_version = TPACKET_V3;
     if (setsockopt(*p_sockfd, SOL_PACKET, PACKET_VERSION, &tpacket_version, sizeof(int)) < 0)
     {
         cth_log_errcode(CTH_LOG_ERROR, "setsockopt", errno);
@@ -273,12 +277,15 @@ int get_original_socket(int* p_sockfd, const char* ethName)
     tpReq.tp_block_nr = get_tp_block_nr();
     tpReq.tp_frame_size = get_tp_frame_size();
     tpReq.tp_frame_nr = get_tp_frame_nr();
+    tpReq.tp_retire_blk_tov = RETIRE_BLK_TOV;
+    tpReq.tp_feature_req_word = TP_FT_REQ_FILL_RXHASH;
     
     if (setsockopt(*p_sockfd, SOL_PACKET, PACKET_RX_RING, (void*)&tpReq, sizeof tpReq) < 0)
     {
         cth_log_errcode(CTH_LOG_ERROR, "setsockopt", errno);
         ret |= CTH_SET_PACKET_RING_ERR;
     }
+
 
 pass:
 	return ret;
@@ -308,9 +315,35 @@ static void free_mmap(void* mmapArea)
     munmap(mmapArea, MmapBufferLen);
 }
 
-static int original_main_loop(int sockfd, char* mmapArea)
-{
+//static void* cath_thread_handle(void* vsockfd)
+//{
+//}
 
+static int work_block(struct tpacket_block_desc* pbd)
+{
+    int numPkts = pbd->hdr.bh1.num_pkts;
+    int retNumPkts = numPkts;
+    struct tpacket3_hdr* hdr =
+        (struct tpacket3_hdr*)((char*)pbd + pbd->hdr.bh1.offset_to_first_pkt);
+    
+    for (int i = 0;
+         i < numPkts;
+         i++,  hdr = (struct tpacket3_hdr*)((char*) hdr + hdr->tp_next_offset))
+    {
+        if (hdr->tp_snaplen == 0 || hdr->tp_len == 0)
+        {
+            retNumPkts--;
+            continue;
+        }
+
+        output_pcap_packet((char*)hdr + hdr->tp_mac, hdr->tp_snaplen, hdr->tp_len);
+    }
+
+    return retNumPkts;
+}
+
+static int original_main_loop(int sockfd, char* mmapArea, struct iovec* rd)
+{
     struct pollfd pfd;
     pfd.fd = sockfd;
     pfd.events = POLLIN;
@@ -318,11 +351,12 @@ static int original_main_loop(int sockfd, char* mmapArea)
 
     size_t index = 0;
     size_t counter = 0;
-    while (true)
+    while (!g_recSigint)
     {
-        struct tpacket_hdr* hdr = (struct tpacket_hdr*)(mmapArea + index * tpReq.tp_frame_size);
+        //const size_t offset = index * tpReq.tp_block_size;
+        struct tpacket_block_desc* pbd = (struct tpacket_block_desc*)rd[index].iov_base;
         
-        if ((hdr->tp_status & TP_STATUS_USER) != TP_STATUS_USER)
+        if ((pbd->hdr.bh1.block_status & TP_STATUS_USER) != TP_STATUS_USER)
         {
             if (poll(&pfd, 1, -1) < 0)
             {
@@ -346,15 +380,9 @@ static int original_main_loop(int sockfd, char* mmapArea)
         if (g_recSigint)
             break;
 
-        if (errno == EINTR)
-            break;
-
-        //内核设置了PACKET环后不会回写
-        hdr->tp_status = TP_STATUS_KERNEL;
-        index = (index + 1) % tpReq.tp_frame_nr;
-        ++counter;
-        output_pcap_packet((char*)hdr + hdr->tp_mac, hdr->tp_len);
-
+        counter += work_block(pbd);
+        pbd->hdr.bh1.block_status = TP_STATUS_KERNEL;
+        
         //恢复ctrlc
         if (recover_sig(&state) < 0)
         {
@@ -362,6 +390,8 @@ static int original_main_loop(int sockfd, char* mmapArea)
             goto cleanmmap;
         }
         //--
+
+        index = (index + 1) % tpReq.tp_block_nr;
     }
 
     cth_log_digit(CTH_LOG_INFO, "Captured %d packets", counter);
@@ -371,6 +401,18 @@ static int original_main_loop(int sockfd, char* mmapArea)
 cleanmmap:
     free_mmap(mmapArea);
     return -1;
+}
+
+static struct iovec* initial_rd(char* mmapArea)
+{
+    struct iovec* rd = malloc(tpReq.tp_block_nr * sizeof(struct iovec));
+    for (size_t i = 0; i < tpReq.tp_block_nr; i++)
+    {
+        rd[i].iov_base = mmapArea + (i * tpReq.tp_block_size);
+        rd[i].iov_len = tpReq.tp_block_size;
+    }
+    
+    return rd;
 }
 
 int original_main()
@@ -384,6 +426,7 @@ int original_main()
 		goto err;
 	}
 	
+
 	if (initial_signal())
 	{
 		cth_log(CTH_LOG_FATAL, "inital_signal error, exit");
@@ -396,21 +439,25 @@ int original_main()
         cth_log(CTH_LOG_FATAL, "set_packet_ring error");
         goto cleanfd;
     }
+
+    struct iovec* rd = initial_rd(mmapArea);
     
-	if (initial_pcap_file(get_save_pcap_path(), mmapArea, tpReq.tp_frame_nr) < 0)
+	if (initial_pcap_file(get_save_pcap_path(), mmapArea) < 0)
     {
         cth_log(CTH_LOG_FATAL, "initial_pcap_file error, exit");
         goto cleanfd;
     }
 
-	original_main_loop(sockfd, mmapArea);
+	original_main_loop(sockfd, mmapArea, rd);
 
     close(sockfd);
 	close_pcap_file();
+    free(rd);
 	return 0;
 
 cleanfd:
-	if (sockfd > 0) close(sockfd);
+	close(sockfd);
 err:
 	return -1;
 }
+

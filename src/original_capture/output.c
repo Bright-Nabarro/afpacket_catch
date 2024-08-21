@@ -14,9 +14,8 @@
 #include "logger.h"
 
 static const size_t g_lineBreakNum = 20;
-//static FILE* output_file = NULL;
+static FILE* output_file = NULL;
 static int g_outputFd = 0;
-static struct iovec* g_ioRd;
 static char* g_mmapArea = NULL;
 
 
@@ -68,33 +67,33 @@ static void fprint_mac(FILE* file, const uint8_t mac[ETH_ALEN])
 			mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 }
 
-//int inital_output_file(const char* path)
-//{
-//	output_file = fopen(path, "w");
-//	return 0;
-//}
-//
-//int close_output_file()
-//{
-//	if (output_file == NULL)
-//		return 0;
-//
-//	fclose(output_file);
-//	output_file = NULL;
-//	return 0;
-//}
-//
-//int output_binary_packet(char* buf, int numBytes)
-//{
-//    
-//	inital_output_file(get_save_pcap_path());
-//	fprint_bits(output_file, buf, numBytes);
-//	return 0;
-//}
-
-int initial_pcap_file(const char* path, char* mmapArea, size_t frameNr)
+int inital_output_file(const char* path)
 {
-    g_ioRd = malloc(frameNr * sizeof(struct iovec));
+	output_file = fopen(path, "w");
+	return 0;
+}
+
+int close_output_file()
+{
+	if (output_file == NULL)
+		return 0;
+
+	fclose(output_file);
+	output_file = NULL;
+	return 0;
+}
+
+int output_binary_packet(char* buf, int numBytes)
+{
+    
+	inital_output_file(get_save_pcap_path());
+	fprint_bits(output_file, buf, numBytes);
+	return 0;
+}
+
+int initial_pcap_file(const char* path, char* mmapArea)
+{
+
     g_outputFd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     g_mmapArea = mmapArea;
 
@@ -124,24 +123,22 @@ err:
 
 int close_pcap_file()
 {
-    free(g_ioRd);
-    g_ioRd = NULL;
     close(g_outputFd);
     return 0;
 }
 
-int output_pcap_packet(char* buf, int numBytes)
+int output_pcap_packet(char* buf, int inclLen, int origLen)
 {
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
     struct pcap_packet_header packetHeader = {
         .ts_sec = ts.tv_sec,
         .ts_usec = ts.tv_nsec / 1000,
-        .incl_len = numBytes,
-        .orig_len = numBytes,
+        .incl_len = inclLen,
+        .orig_len = origLen,
     };
     write(g_outputFd, &packetHeader, sizeof packetHeader);
-    write(g_outputFd, buf, numBytes);
+    write(g_outputFd, buf, inclLen);
     return 0;
 }
 

@@ -61,6 +61,7 @@ src/main/CMakeFiles/app.dir/main.c.o: /home/lin17/workspace/contest/test/c/af_pa
   /usr/include/bits/types/timer_t.h \
   /usr/include/bits/typesizes.h \
   /usr/include/bits/uintn-identity.h \
+  /usr/include/bits/uio_lim.h \
   /usr/include/bits/unistd_ext.h \
   /usr/include/bits/wordsize.h \
   /usr/include/endian.h \
@@ -77,6 +78,7 @@ src/main/CMakeFiles/app.dir/main.c.o: /home/lin17/workspace/contest/test/c/af_pa
   /usr/include/sys/select.h \
   /usr/include/sys/socket.h \
   /usr/include/sys/types.h \
+  /usr/include/sys/uio.h \
   /usr/include/unistd.h \
   /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include/stdarg.h \
   /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include/stddef.h
@@ -85,6 +87,8 @@ src/main/CMakeFiles/app.dir/main.c.o: /home/lin17/workspace/contest/test/c/af_pa
 /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include/stdarg.h:
 
 /usr/include/unistd.h:
+
+/usr/include/sys/uio.h:
 
 /usr/include/sys/cdefs.h:
 
@@ -99,6 +103,8 @@ src/main/CMakeFiles/app.dir/main.c.o: /home/lin17/workspace/contest/test/c/af_pa
 /usr/include/bits/wordsize.h:
 
 /usr/include/bits/unistd_ext.h:
+
+/usr/include/bits/uio_lim.h:
 
 /usr/include/stdc-predef.h:
 

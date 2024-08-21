@@ -1,4 +1,5 @@
 #pragma once
+#include <sys/uio.h>
 
 #define CTH_FATAL_ERR           (int)-1
 #define CTH_SUCCESS             0x0
