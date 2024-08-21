@@ -1,1 +1,0 @@
-/usr/sbin/gcc -g CMakeFiles/app.dir/main.c.o -o /home/lin17/workspace/contest/test/c/af_packet_catch/bin/app  /home/lin17/workspace/contest/test/c/af_packet_catch/lib/liboriginal_capture.a /home/lin17/workspace/contest/test/c/af_packet_catch/lib/libutil.a -lpthread /home/lin17/workspace/contest/test/c/af_packet_catch/extern/lua/lib/liblua.a -lm -ldl
