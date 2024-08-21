@@ -4,6 +4,7 @@
 src/util/CMakeFiles/util.dir/configure.c.o
  /home/lin17/workspace/contest/test/c/af_packet_catch/src/util/configure.c
  /home/lin17/workspace/contest/test/c/af_packet_catch/src/util/include/configure.h
+ /home/lin17/workspace/contest/test/c/af_packet_catch/src/util/include/logger.h
  /usr/include/alloca.h
  /usr/include/bits/atomic_wide_counter.h
  /usr/include/bits/byteswap.h

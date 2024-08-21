@@ -43,7 +43,8 @@ src/original_capture/CMakeFiles/original_capture.dir/original_capture.c.o: \
  /usr/include/linux/if_ether.h /usr/include/linux/if_packet.h \
  /usr/include/asm/byteorder.h \
  /usr/include/linux/byteorder/little_endian.h /usr/include/linux/swab.h \
- /usr/include/asm/swab.h /usr/include/signal.h \
+ /usr/include/asm/swab.h /usr/include/poll.h /usr/include/sys/poll.h \
+ /usr/include/bits/poll.h /usr/include/signal.h \
  /usr/include/bits/signum-generic.h /usr/include/bits/signum-arch.h \
  /usr/include/bits/types/sig_atomic_t.h \
  /usr/include/bits/types/siginfo_t.h /usr/include/bits/types/__sigval_t.h \
@@ -72,7 +73,6 @@ src/original_capture/CMakeFiles/original_capture.dir/original_capture.c.o: \
  /usr/include/bits/posix_opt.h /usr/include/bits/environments.h \
  /usr/include/bits/confname.h /usr/include/bits/getopt_posix.h \
  /usr/include/bits/getopt_core.h /usr/include/bits/unistd_ext.h \
- /usr/include/poll.h /usr/include/sys/poll.h /usr/include/bits/poll.h \
  /home/lin17/workspace/contest/test/c/af_packet_catch/extern/lua/include/lauxlib.h \
  /usr/include/stdio.h \
  /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include/stdarg.h \

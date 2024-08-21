@@ -150,6 +150,7 @@ static void cth_log_callback(void* args)
         break;
     case CTH_LOG_FMT_STR:
         fprintf(file, thdArgs->strdata1, thdArgs->strdata2);
+        break;
     case CTH_LOG_ERROR_CODE:
         fprintf(file, "%s error: %s", thdArgs->strdata1, strerror(thdArgs->digit));
         break;

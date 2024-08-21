@@ -177,6 +177,7 @@ src/original_capture/CMakeFiles/original_capture.dir/output.c.o: /home/lin17/wor
   /home/lin17/workspace/contest/test/c/af_packet_catch/src/original_capture/include/output.h \
   /home/lin17/workspace/contest/test/c/af_packet_catch/src/util/include/configure.h \
   /home/lin17/workspace/contest/test/c/af_packet_catch/src/util/include/logger.h \
+  /usr/include/alloca.h \
   /usr/include/asm-generic/bitsperlong.h \
   /usr/include/asm-generic/errno-base.h \
   /usr/include/asm-generic/errno.h \
@@ -190,22 +191,32 @@ src/original_capture/CMakeFiles/original_capture.dir/output.c.o: /home/lin17/wor
   /usr/include/asm/types.h \
   /usr/include/bits/atomic_wide_counter.h \
   /usr/include/bits/byteswap.h \
+  /usr/include/bits/confname.h \
   /usr/include/bits/endian.h \
   /usr/include/bits/endianness.h \
+  /usr/include/bits/environments.h \
   /usr/include/bits/errno.h \
+  /usr/include/bits/fcntl-linux.h \
+  /usr/include/bits/fcntl.h \
   /usr/include/bits/floatn-common.h \
   /usr/include/bits/floatn.h \
+  /usr/include/bits/getopt_core.h \
+  /usr/include/bits/getopt_posix.h \
   /usr/include/bits/libc-header-start.h \
   /usr/include/bits/long-double.h \
+  /usr/include/bits/posix_opt.h \
   /usr/include/bits/pthreadtypes-arch.h \
   /usr/include/bits/pthreadtypes.h \
   /usr/include/bits/select.h \
+  /usr/include/bits/stat.h \
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
+  /usr/include/bits/struct_stat.h \
   /usr/include/bits/thread-shared-types.h \
   /usr/include/bits/time.h \
   /usr/include/bits/time64.h \
@@ -224,6 +235,7 @@ src/original_capture/CMakeFiles/original_capture.dir/output.c.o: /home/lin17/wor
   /usr/include/bits/types/locale_t.h \
   /usr/include/bits/types/sigset_t.h \
   /usr/include/bits/types/struct_FILE.h \
+  /usr/include/bits/types/struct_iovec.h \
   /usr/include/bits/types/struct_itimerspec.h \
   /usr/include/bits/types/struct_timespec.h \
   /usr/include/bits/types/struct_timeval.h \
@@ -232,10 +244,15 @@ src/original_capture/CMakeFiles/original_capture.dir/output.c.o: /home/lin17/wor
   /usr/include/bits/types/timer_t.h \
   /usr/include/bits/typesizes.h \
   /usr/include/bits/uintn-identity.h \
+  /usr/include/bits/uio_lim.h \
+  /usr/include/bits/unistd_ext.h \
+  /usr/include/bits/waitflags.h \
+  /usr/include/bits/waitstatus.h \
   /usr/include/bits/wchar.h \
   /usr/include/bits/wordsize.h \
   /usr/include/endian.h \
   /usr/include/errno.h \
+  /usr/include/fcntl.h \
   /usr/include/features-time64.h \
   /usr/include/features.h \
   /usr/include/gnu/stubs-64.h \
@@ -249,16 +266,23 @@ src/original_capture/CMakeFiles/original_capture.dir/output.c.o: /home/lin17/wor
   /usr/include/stdc-predef.h \
   /usr/include/stdint.h \
   /usr/include/stdio.h \
+  /usr/include/stdlib.h \
   /usr/include/sys/cdefs.h \
   /usr/include/sys/select.h \
   /usr/include/sys/types.h \
+  /usr/include/sys/uio.h \
   /usr/include/time.h \
+  /usr/include/unistd.h \
   /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include/stdarg.h \
   /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include/stddef.h \
   /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include/stdint.h
 
 
 /usr/include/bits/types/struct_tm.h:
+
+/usr/include/bits/stat.h:
+
+/usr/include/bits/fcntl.h:
 
 /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include/syslimits.h:
 
@@ -283,6 +307,8 @@ src/original_capture/CMakeFiles/original_capture.dir/output.c.o: /home/lin17/wor
 /usr/include/sys/socket.h:
 
 /usr/include/sys/cdefs.h:
+
+/usr/include/bits/fcntl-linux.h:
 
 /usr/include/strings.h:
 
@@ -311,6 +337,8 @@ src/original_capture/CMakeFiles/original_capture.dir/output.c.o: /home/lin17/wor
 /usr/include/linux/filter.h:
 
 /usr/include/linux/errno.h:
+
+/usr/include/sys/uio.h:
 
 /usr/include/linux/bpf_common.h:
 
@@ -428,6 +456,8 @@ src/original_capture/CMakeFiles/original_capture.dir/output.c.o: /home/lin17/wor
 
 /usr/include/bits/struct_rwlock.h:
 
+/usr/include/bits/struct_stat.h:
+
 /home/lin17/workspace/contest/test/c/af_packet_catch/src/util/include/configure.h:
 
 /usr/include/bits/types/time_t.h:
@@ -460,6 +490,8 @@ src/original_capture/CMakeFiles/original_capture.dir/output.c.o: /home/lin17/wor
 
 /usr/include/bits/byteswap.h:
 
+/usr/include/bits/uio_lim.h:
+
 /home/lin17/workspace/contest/test/c/af_packet_catch/extern/lua/include/lauxlib.h:
 
 /usr/include/bits/types/__FILE.h:
@@ -491,6 +523,8 @@ src/original_capture/CMakeFiles/original_capture.dir/output.c.o: /home/lin17/wor
 /usr/include/bits/sigthread.h:
 
 /usr/include/bits/pthread_stack_min.h:
+
+/usr/include/fcntl.h:
 
 /usr/include/gnu/stubs.h:
 

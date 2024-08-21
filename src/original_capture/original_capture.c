@@ -27,6 +27,7 @@
 #include "signal_handle.h"
 
 static struct tpacket_req tpReq;
+static size_t MmapBufferLen;
 /*
  * 绑定到指定接口, 如果出错全部返回-1
  */
@@ -286,32 +287,29 @@ pass:
 /*
  *  出错返回NULL
  */
-static void* set_packet_ring(int sockfd)
+static void* initial_mmap(int sockfd)
 {
-    size_t bufferLen = tpReq.tp_block_size * tpReq.tp_block_nr;
-    void* mmapArea = mmap(NULL, bufferLen, PROT_READ | PROT_WRITE, MAP_SHARED, sockfd, 0);
+    MmapBufferLen = tpReq.tp_block_size * tpReq.tp_block_nr;
+    void* mmapArea = mmap(NULL, MmapBufferLen, PROT_READ | PROT_WRITE, MAP_SHARED, sockfd, 0);
     if (mmapArea == MAP_FAILED)
     {
         cth_log_errcode(CTH_LOG_FATAL, "mmap", errno);
         goto err;
     }
-    memset(mmapArea, 0, bufferLen);
+    memset(mmapArea, 0, MmapBufferLen);
 
     return mmapArea;
 err:
     return NULL;
 }
 
-static int original_main_loop(int sockfd)
+static void free_mmap(void* mmapArea)
 {
-    size_t counter = 0;
+    munmap(mmapArea, MmapBufferLen);
+}
 
-    void* mmapArea = set_packet_ring(sockfd);
-    if (mmapArea == NULL)
-    {
-        cth_log(CTH_LOG_FATAL, "set_packet_ring error");
-        return -1;
-    }
+static int original_main_loop(int sockfd, char* mmapArea)
+{
 
     struct pollfd pfd;
     pfd.fd = sockfd;
@@ -319,6 +317,7 @@ static int original_main_loop(int sockfd)
     cth_log(CTH_LOG_INFO, "start capturing");
 
     size_t index = 0;
+    size_t counter = 0;
     while (true)
     {
         struct tpacket_hdr* hdr = (struct tpacket_hdr*)(mmapArea + index * tpReq.tp_frame_size);
@@ -330,7 +329,7 @@ static int original_main_loop(int sockfd)
                 if (errno == EINTR)
                     break;
                 cth_log_errcode(CTH_LOG_FATAL, "poll", errno);
-                return -1;
+                goto cleanmmap;
             }
             continue;
         }
@@ -350,8 +349,8 @@ static int original_main_loop(int sockfd)
         if (errno == EINTR)
             break;
 
-        hdr->tp_status = TP_STATUS_KERNEL;
         //内核设置了PACKET环后不会回写
+        hdr->tp_status = TP_STATUS_KERNEL;
         index = (index + 1) % tpReq.tp_frame_nr;
         ++counter;
         output_pcap_packet((char*)hdr + hdr->tp_mac, hdr->tp_len);
@@ -360,13 +359,18 @@ static int original_main_loop(int sockfd)
         if (recover_sig(&state) < 0)
         {
             cth_log(CTH_LOG_FATAL, "recover_sig error");
-            return -1;
+            goto cleanmmap;
         }
         //--
     }
 
     cth_log_digit(CTH_LOG_INFO, "Captured %d packets", counter);
+    free_mmap(mmapArea);
     return 0;
+
+cleanmmap:
+    free_mmap(mmapArea);
+    return -1;
 }
 
 int original_main()
@@ -383,23 +387,30 @@ int original_main()
 	if (initial_signal())
 	{
 		cth_log(CTH_LOG_FATAL, "inital_signal error, exit");
-		goto err;
+		goto cleanfd;
 	}
 
-	if (initial_pcap_file(get_save_pcap_path()) < 0)
+    void* mmapArea = initial_mmap(sockfd);
+    if (mmapArea == NULL)
+    {
+        cth_log(CTH_LOG_FATAL, "set_packet_ring error");
+        goto cleanfd;
+    }
+    
+	if (initial_pcap_file(get_save_pcap_path(), mmapArea, tpReq.tp_frame_nr) < 0)
     {
         cth_log(CTH_LOG_FATAL, "initial_pcap_file error, exit");
-        goto err;
+        goto cleanfd;
     }
 
-	original_main_loop(sockfd);
+	original_main_loop(sockfd, mmapArea);
 
     close(sockfd);
 	close_pcap_file();
 	return 0;
 
-err:
+cleanfd:
 	if (sockfd > 0) close(sockfd);
-	close_output_file();
+err:
 	return -1;
 }
