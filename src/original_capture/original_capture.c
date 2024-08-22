@@ -1,6 +1,7 @@
 #include "original_capture.h"
 
 #include <arpa/inet.h>
+#include <assert.h>
 #include <errno.h>
 #include <linux/filter.h>
 #include <linux/if.h>
@@ -28,10 +29,16 @@
 #include "signal_handle.h"
 
 #define RETIRE_BLK_TOV 100
+#define WORK_THREAD_COUNT 1
 
 static struct tpacket_req3 tpReq;
 static size_t MmapBufferLen;
 
+typedef struct 
+{
+    int sockfd;
+    int sigfd;      //用于接收到sigint时唤醒poll
+} CthWorkFds;
 
 /*
  * 绑定到指定接口, 如果出错全部返回-1
@@ -207,7 +214,6 @@ err:
     return -1;
 }
 
-//配置最后PACKET环形区域时开始捕获
 int get_original_socket(int* p_sockfd, const char* ethName)
 {
 	int ret = CTH_SUCCESS;
@@ -285,7 +291,14 @@ int get_original_socket(int* p_sockfd, const char* ethName)
         cth_log_errcode(CTH_LOG_ERROR, "setsockopt", errno);
         ret |= CTH_SET_PACKET_RING_ERR;
     }
-
+    
+    int fanoutType = PACKET_FANOUT_HASH;
+    int fanoutArg = 1 | (fanoutType << 16);
+    if (setsockopt(*p_sockfd, SOL_PACKET, PACKET_FANOUT, &fanoutArg, sizeof fanoutArg) < 0)
+    {
+        cth_log_errcode(CTH_LOG_FATAL, "setsockopt", errno);
+        ret |= -1;
+    }
 
 pass:
 	return ret;
@@ -315,10 +328,6 @@ static void free_mmap(void* mmapArea)
     munmap(mmapArea, MmapBufferLen);
 }
 
-//static void* cath_thread_handle(void* vsockfd)
-//{
-//}
-
 static int work_block(struct tpacket_block_desc* pbd)
 {
     int numPkts = pbd->hdr.bh1.num_pkts;
@@ -342,11 +351,13 @@ static int work_block(struct tpacket_block_desc* pbd)
     return retNumPkts;
 }
 
-static int original_main_loop(int sockfd, char* mmapArea, struct iovec* rd)
+static int original_main_loop(CthWorkFds* fds, char* mmapArea, struct iovec* rd)
 {
-    struct pollfd pfd;
-    pfd.fd = sockfd;
-    pfd.events = POLLIN;
+    struct pollfd pfd[2];
+    pfd[0].fd = fds->sockfd;
+    pfd[0].events = POLLIN;
+    pfd[1].fd = fds->sigfd;
+    pfd[1].events = POLLIN;
     cth_log(CTH_LOG_INFO, "start capturing");
 
     size_t index = 0;
@@ -358,7 +369,7 @@ static int original_main_loop(int sockfd, char* mmapArea, struct iovec* rd)
         
         if ((pbd->hdr.bh1.block_status & TP_STATUS_USER) != TP_STATUS_USER)
         {
-            if (poll(&pfd, 1, -1) < 0)
+            if (poll(pfd, 2, -1) < 0)
             {
                 if (errno == EINTR)
                     break;
@@ -368,38 +379,24 @@ static int original_main_loop(int sockfd, char* mmapArea, struct iovec* rd)
             continue;
         }
 
-        //屏蔽ctrl c
-        PrevState state;
-        if (block_sig(&state, SIGINT))
+        if (pfd[1].revents & POLLIN)
         {
-            cth_log(CTH_LOG_FATAL, "block_sig");
-            return -1;
-        }
-        //--
-
-        if (g_recSigint)
+            assert(g_recSigint);
             break;
-
+        }
         counter += work_block(pbd);
         pbd->hdr.bh1.block_status = TP_STATUS_KERNEL;
-        
-        //恢复ctrlc
-        if (recover_sig(&state) < 0)
-        {
-            cth_log(CTH_LOG_FATAL, "recover_sig error");
-            goto cleanmmap;
-        }
-        //--
-
         index = (index + 1) % tpReq.tp_block_nr;
     }
 
     cth_log_digit(CTH_LOG_INFO, "Captured %d packets", counter);
     free_mmap(mmapArea);
+    free(fds);
     return 0;
 
 cleanmmap:
     free_mmap(mmapArea);
+    free(fds);
     return -1;
 }
 
@@ -415,48 +412,85 @@ static struct iovec* initial_rd(char* mmapArea)
     return rd;
 }
 
+static void* cath_thread_handle(void* args)
+{
+    CthWorkFds* fds = args;
+
+    void* mmapArea = initial_mmap(fds->sockfd);
+    if (mmapArea == NULL)
+    {
+        cth_log(CTH_LOG_FATAL, "set_packet_ring error");
+        _exit(1);
+    }
+
+    struct iovec* rd = initial_rd(mmapArea);
+
+	original_main_loop(fds, mmapArea, rd);
+    
+    free(rd);
+    return NULL;
+}
+
 int original_main()
 {
-	int sockfd = 0;
+	int sockfd[WORK_THREAD_COUNT];
+    pthread_t threads[WORK_THREAD_COUNT];
     const char* ethName = get_ethernet();
-	int status = get_original_socket(&sockfd, ethName);
-	if (status & CTH_SOCKET_ERR)
-	{
-		cth_log(CTH_LOG_FATAL, "cannot open sockfd, exit");
-		goto err;
-	}
-	
 
+    for (size_t i = 0; i < WORK_THREAD_COUNT; i++)
+    {
+	    int status = get_original_socket(&sockfd[i], ethName);
+	    if (status & CTH_SOCKET_ERR)
+	    {
+	    	cth_log(CTH_LOG_FATAL, "cannot open sockfd, exit");
+	    	goto err;
+	    }
+    }
+	
 	if (initial_signal())
 	{
 		cth_log(CTH_LOG_FATAL, "inital_signal error, exit");
 		goto cleanfd;
 	}
 
-    void* mmapArea = initial_mmap(sockfd);
-    if (mmapArea == NULL)
-    {
-        cth_log(CTH_LOG_FATAL, "set_packet_ring error");
-        goto cleanfd;
-    }
-
-    struct iovec* rd = initial_rd(mmapArea);
-    
-	if (initial_pcap_file(get_save_pcap_path(), mmapArea) < 0)
+	if (initial_pcap_file(get_save_pcap_path()) < 0)
     {
         cth_log(CTH_LOG_FATAL, "initial_pcap_file error, exit");
         goto cleanfd;
     }
 
-	original_main_loop(sockfd, mmapArea, rd);
+    sigset_t sigset;
+    sigemptyset(&sigset);
+    sigaddset(&sigset, SIGINT);
 
-    close(sockfd);
-	close_pcap_file();
-    free(rd);
+    pthread_sigmask(SIG_BLOCK, &sigset, NULL);
+    
+    for (size_t i = 0; i < WORK_THREAD_COUNT; i++)
+    {
+        CthWorkFds* fds = malloc(sizeof(CthWorkFds));
+        fds->sockfd = sockfd[i];
+        fds->sigfd = g_workSignalPipe[0];
+        if (pthread_create(&threads[i], NULL, cath_thread_handle, fds) != 0)
+        {
+            cth_log_errcode(CTH_LOG_FATAL, "pthread_create", errno);
+            goto cleanfd;
+        }
+    }
+    pthread_sigmask(SIG_UNBLOCK, &sigset, NULL);
+    
+    for (size_t i = 0; i < WORK_THREAD_COUNT; i++)
+    {
+        pthread_join(threads[i], NULL);
+        close(sockfd[i]);
+    }
+
+    close_pcap_file();
 	return 0;
 
 cleanfd:
-	close(sockfd);
+    for (size_t i = 0; i < WORK_THREAD_COUNT; i++)
+        close(sockfd[i]);
+
 err:
 	return -1;
 }

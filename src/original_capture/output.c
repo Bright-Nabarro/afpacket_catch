@@ -16,8 +16,6 @@
 static const size_t g_lineBreakNum = 20;
 static FILE* output_file = NULL;
 static int g_outputFd = 0;
-static char* g_mmapArea = NULL;
-
 
 /* pcap全局头部 */
 struct pcap_file_header
@@ -91,12 +89,10 @@ int output_binary_packet(char* buf, int numBytes)
 	return 0;
 }
 
-int initial_pcap_file(const char* path, char* mmapArea)
+int initial_pcap_file(const char* path)
 {
 
     g_outputFd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    g_mmapArea = mmapArea;
-
     if (g_outputFd < 0) 
     {
         cth_log_errcode(CTH_LOG_FATAL, "open", errno);

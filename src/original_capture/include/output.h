@@ -9,7 +9,7 @@ int close_output_file();
 int output_binary_packet(char* buf, int numBytes);
 
 /* 转换为pcap格式保存 */
-int initial_pcap_file(const char* path, char* mmapArea);
+int initial_pcap_file(const char* path);
 int close_pcap_file();
 int output_pcap_packet(char* buf, int inclLen, int origLen);
 

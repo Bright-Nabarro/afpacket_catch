@@ -3,6 +3,7 @@
 #include <sys/types.h>
 
 extern volatile bool g_recSigint;
+extern int g_workSignalPipe[2];
 
 
 typedef struct PrevState_

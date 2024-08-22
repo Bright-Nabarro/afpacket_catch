@@ -9,6 +9,7 @@
 #include "logger.h"
 
 volatile bool g_recSigint = false;
+int g_workSignalPipe[2];
 
 int block_sig(PrevState* manager, int sig)
 {
@@ -53,6 +54,7 @@ void handle_sigint(int sig)
 	fflush(stdout);
 	printf("Received signal %d\n", sig);
 	g_recSigint = true;
+    write(g_workSignalPipe[1], "x", 1);
 
 	if (recover_sig(&state) < 0)
 	{
@@ -69,6 +71,7 @@ int initial_signal()
 	sa.sa_handler = handle_sigint;
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = 0;
+    pipe(g_workSignalPipe);
 
 	if (sigaction(SIGINT, &sa, NULL) < 0)
 	{
