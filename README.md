@@ -18,4 +18,4 @@
 16. 全局信号变量SIGINT应该改为原子
 17. `util`中抽象信号屏蔽恢复函数应该删除或重构
 18. `original_capture.c` set_sock 接口需要更改
-19. `logger` 针对ERROR和FATAL设置无缓冲区输出
+--19. `logger` 针对ERROR和FATAL设置无缓冲区输出

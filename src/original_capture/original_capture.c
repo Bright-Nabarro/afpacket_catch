@@ -498,8 +498,10 @@ int original_main()
         }
         counter += *ret;
         
-        cth_log_digit(CTH_LOG_INFO, "thread %u end", (unsigned int)threads[i]);
-        cth_log_digit(CTH_LOG_INFO, "-- catch %u packet", *ret);
+        const size_t strLen = 128;
+        char* str = calloc(1, strLen);
+        snprintf(str, strLen, "thread %u catch %u packet", (unsigned int)threads[i], *ret);
+        cth_log_heapstr(CTH_LOG_INFO, str);
 
         close(sockfd[i]);
         free(ret);

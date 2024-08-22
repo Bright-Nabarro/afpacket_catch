@@ -12,6 +12,7 @@ enum CTH_LOG_LEVEL{
 int cth_log_init();
 void cth_log_close();
 
+int cth_log_heapstr(enum CTH_LOG_LEVEL logLevel, char* msg);
 int cth_log(enum CTH_LOG_LEVEL logLevel, const char* msg);
 int cth_log_digit(enum CTH_LOG_LEVEL logLevel, const char* fmt, int digit);
 int cth_log_str(enum CTH_LOG_LEVEL logLevel, const char* fmt, const char* msg);

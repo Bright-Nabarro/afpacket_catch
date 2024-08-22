@@ -32,6 +32,7 @@ typedef struct
     FILE* file;
     enum CTH_LOG_LEVEL logLevel;
     enum CTH_LOG_TYPE{
+        CTH_LOG_HEAP_MSG,
         CTH_LOG_NORMAL_MSG,         //[%s] %s
         CTH_LOG_FMT_DIGITAL,        //[%s] fmt, digit
         CTH_LOG_FMT_STR,            //[%s] fmt, str
@@ -103,6 +104,12 @@ const char* log_level_to_string(enum CTH_LOG_LEVEL logLevel)
 }
 
 
+int cth_log_heapstr(enum CTH_LOG_LEVEL logLevel, char* msg)
+{
+    INVOKE_CTH_LOG_REGISTER_SCHEDULER(CTH_LOG_HEAP_MSG, logLevel, msg, NULL, 0);
+    return 0;
+}
+
 int cth_log(enum CTH_LOG_LEVEL logLevel, const char* msg)
 {
     INVOKE_CTH_LOG_REGISTER_SCHEDULER(CTH_LOG_NORMAL_MSG, logLevel, msg, NULL, 0);
@@ -145,6 +152,10 @@ static void cth_log_callback(void* args)
     
     switch(thdArgs->logType)
     {
+    case CTH_LOG_HEAP_MSG:
+        fprintf(file, "%s", thdArgs->strdata1);
+        free((void*)thdArgs->strdata1);
+        break;
     case CTH_LOG_NORMAL_MSG:
         fprintf(file, "%s", thdArgs->strdata1);
         break;
