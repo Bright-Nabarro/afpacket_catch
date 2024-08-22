@@ -138,7 +138,10 @@ static void cth_log_callback(void* args)
 {
     CthLogThdFuncArgs* thdArgs = args;
     FILE* file = thdArgs->file;
- 	fprintf(file, "[%s]  ", log_level_to_string(thdArgs->logLevel));
+    if (thdArgs->logLevel == CTH_LOG_ERROR || thdArgs->logLevel == CTH_LOG_FATAL)
+        file = stderr;
+
+    fprintf(file, "[%s]  ", log_level_to_string(thdArgs->logLevel));
     
     switch(thdArgs->logType)
     {

@@ -1,5 +1,6 @@
 #include "task_scheduler.h"
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -32,10 +33,13 @@ static void* cth_task_scheduler_add_task(void* arg);
 CthTaskScheduler* cth_task_scheduler_init(bool useLogger, size_t queueSize)
 {
     CthTaskScheduler* scheduler = calloc(1, sizeof(CthTaskScheduler));
-    scheduler->queueSize = queueSize;
-    scheduler->taskQueue = malloc(sizeof(CthTask) * queueSize);
+    scheduler->queTotalSize = queueSize;
+    scheduler->taskQueue = calloc(1, sizeof(CthTask) * queueSize);
     scheduler->shutdown = false;
     scheduler->addTaskWorking = ATOMIC_VAR_INIT(false);
+    scheduler->queSize = 0;
+    scheduler->queHead = 0;
+    scheduler->queTail = 0;
     
     if (useLogger)
     {
@@ -63,6 +67,7 @@ CthTaskScheduler* cth_task_scheduler_init(bool useLogger, size_t queueSize)
         scheduler->task_log_err(CTH_LOG_FATAL, "pthread_cond_init", ret);
         goto clean_mutex;
     }
+
     ret = pthread_cond_init(&scheduler->condQueueFull, NULL);
     if (ret)
     {
@@ -162,15 +167,17 @@ int cth_task_scheduler_destroy(CthTaskScheduler* scheduler)
     {
         scheduler->task_log_err(CTH_LOG_FATAL, "pthread_mutex_lock", ret);
     }
-    ret = pthread_cond_broadcast(&scheduler->condQueueEmpty);
-    if (ret)
-    {
-        scheduler->task_log_err(CTH_LOG_FATAL, "pthread_cond_broadcast", ret);
-    }
+    
     ret = pthread_mutex_unlock(&scheduler->queueMutex);
     if (ret)
     {
         scheduler->task_log_err(CTH_LOG_FATAL, "pthread_mutex_unlock", ret);
+    }
+
+    ret = pthread_cond_broadcast(&scheduler->condQueueEmpty);
+    if (ret)
+    {
+        scheduler->task_log_err(CTH_LOG_FATAL, "pthread_cond_broadcast", ret);
     }
 
     ret = pthread_join(scheduler->managerThread, (void**)&managerRet);
@@ -194,7 +201,7 @@ int cth_task_scheduler_destroy(CthTaskScheduler* scheduler)
         scheduler->task_log_err(CTH_LOG_FATAL, "pthread_mutex_destroy", ret);
         return -1;
     }
-    if (!cth_scheduler_queue_empty(scheduler))
+    if (scheduler->queSize != 0)
     {
         scheduler->task_log(CTH_LOG_FATAL, "schedulert empty, logic error");
     }
@@ -202,13 +209,6 @@ int cth_task_scheduler_destroy(CthTaskScheduler* scheduler)
     free(scheduler);
 
     return ret;
-}
-
-bool cth_scheduler_queue_empty(const CthTaskScheduler* scheduler)
-{
-    if (!scheduler->queueFull && scheduler->queueHead == scheduler->queueTail)
-        return true;
-    return false;
 }
 
 static void* cth_task_scheduler_manager(void* arg)
@@ -233,7 +233,7 @@ static void* cth_task_scheduler_manager(void* arg)
     CthTaskScheduler* scheduler = arg;
     int ret;
     while(!scheduler->shutdown
-        || !cth_scheduler_queue_empty(scheduler)
+        || scheduler->queSize != 0
         || atomic_load(&scheduler->addTaskWorking))
     {
         ret = pthread_mutex_lock(&scheduler->queueMutex);
@@ -243,10 +243,10 @@ static void* cth_task_scheduler_manager(void* arg)
             _exit(1);
         }
         
-        while(cth_scheduler_queue_empty(scheduler))
+        while(scheduler->queSize == 0)
         {
             if (scheduler->shutdown
-                && cth_scheduler_queue_empty(scheduler)
+                && scheduler->queSize == 0
                 && !atomic_load(&scheduler->addTaskWorking))
             {
                 ret = pthread_mutex_unlock(&scheduler->queueMutex);
@@ -265,22 +265,22 @@ static void* cth_task_scheduler_manager(void* arg)
                 _exit(1);
             }
         }
+        assert(scheduler->queSize != 0);
         
-        CthTask* currTask = scheduler->taskQueue[scheduler->queueHead++];
-        if (scheduler->queueHead == scheduler->queueSize)
+        CthTask* currTask = scheduler->taskQueue[scheduler->queHead];
+        assert(currTask != NULL);
+        scheduler->taskQueue[scheduler->queHead] = NULL;
+        scheduler->queHead++;
+        scheduler->queSize--;
+        if (scheduler->queHead == scheduler->queTotalSize)
         {
-            scheduler->queueHead = 0;
-            if (scheduler->queueTail == scheduler->queueSize)
-                scheduler->queueTail = 0;
+            scheduler->queHead = 0;
         }
-
-        if (scheduler->queueFull)
-            scheduler->queueFull = false;
 
         void (*tk_func)(void*) = currTask->tk_func;
         void* tk_arg = currTask->arg;
 
-        ret = pthread_cond_signal(&scheduler->condQueueFull);
+        ret = pthread_cond_broadcast(&scheduler->condQueueFull);
         if (ret)
         {
             scheduler->task_log_err(CTH_LOG_FATAL, "pthread_cond_signal", ret);
@@ -338,7 +338,7 @@ static void* cth_task_scheduler_add_task(void* arg)
         _exit(1);
     }
     
-    while (scheduler->queueFull)
+    while (scheduler->queSize == scheduler->queTotalSize)
     {
         ret = pthread_cond_wait(&scheduler->condQueueFull, &scheduler->queueMutex);
         if (ret)
@@ -348,15 +348,18 @@ static void* cth_task_scheduler_add_task(void* arg)
         }
     }
     
-    scheduler->taskQueue[scheduler->queueTail] = task;
+    assert(scheduler->taskQueue[scheduler->queTail] == NULL);
+    scheduler->taskQueue[scheduler->queTail] = task;
     
-    if (++scheduler->queueTail == scheduler->queueHead)
-        scheduler->queueFull = true;
-    
-    ret = pthread_cond_signal(&scheduler->condQueueEmpty);
+    scheduler->queTail++;
+    if (scheduler->queTail == scheduler->queTotalSize)
+        scheduler->queTail = 0;
+    scheduler->queSize++;
+
+    ret = pthread_cond_broadcast(&scheduler->condQueueEmpty);
     if (ret)
     {
-        scheduler->task_log_err(CTH_LOG_FATAL, "pthread_cond_signal", ret);
+        scheduler->task_log_err(CTH_LOG_FATAL, "pthread_cond_broadcast", ret);
         _exit(1);
     }
 

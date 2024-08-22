@@ -497,6 +497,7 @@ int original_main()
             continue;
         }
         counter += *ret;
+        
         cth_log_digit(CTH_LOG_INFO, "thread %u end", (unsigned int)threads[i]);
         cth_log_digit(CTH_LOG_INFO, "-- catch %u packet", *ret);
 
