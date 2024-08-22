@@ -3,3 +3,5 @@ lib/*
 *.pcap
 compile_commands.json
 .cache/
+bin/
+*.log

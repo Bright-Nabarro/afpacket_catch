@@ -24,7 +24,7 @@
 
 static void cth_log_callback(void* args);
 
-static CthTaskScheduler* scheduler = NULL;
+static CthTaskScheduler* logScheduler = NULL;
 static FILE* logFile;
 
 typedef struct
@@ -65,8 +65,8 @@ int cth_log_init()
         }
 	}
 
-    scheduler = cth_task_scheduler_init(true, CTH_LOG_QUE_SIZ);
-    if (scheduler == NULL)
+    logScheduler = cth_task_scheduler_init(true, CTH_LOG_QUE_SIZ);
+    if (logScheduler == NULL)
     {
         fprintf(stderr, "cth_task_scheduler_init error\n");
         return -1;
@@ -79,7 +79,7 @@ void cth_log_close()
     fflush(logFile);
     if (logFile != stdout)
         fclose(logFile);
-    if (cth_task_scheduler_destroy(scheduler))
+    if (cth_task_scheduler_destroy(logScheduler))
     {
         fprintf(stderr, "cth_task_scheduler_destroy error\n");
     }
@@ -176,7 +176,7 @@ static int cth_log_register_scheduler(enum CTH_LOG_TYPE logType, enum CTH_LOG_LE
     args->strdata2 = strdata2;
     args->digit = digit;
     
-    if (cth_task_scheduler_add(scheduler, cth_log_callback, args) < 0)
+    if (cth_task_scheduler_add(logScheduler, cth_log_callback, args) < 0)
     {
         fprintf(stderr, "cth_task_scheduler_add error\n");
         free(args);

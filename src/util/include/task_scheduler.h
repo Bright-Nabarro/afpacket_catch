@@ -39,6 +39,7 @@ typedef struct
 /* return NULL if error */
 CthTaskScheduler* cth_task_scheduler_init(bool useLogger, size_t queueSize);
 
+/* 工作线程无需释放参数 */
 int cth_task_scheduler_add(CthTaskScheduler* manager, void(*func)(void*), void* arg);
 
 int cth_task_scheduler_destroy(CthTaskScheduler* manager);

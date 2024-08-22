@@ -12,10 +12,15 @@
 
 #include "configure.h"
 #include "logger.h"
+#include "task_scheduler.h"
+
+#define CTH_OUTPUT_QUE_SIZ 40
 
 static const size_t g_lineBreakNum = 20;
 static FILE* output_file = NULL;
 static int g_outputFd = 0;
+static CthTaskScheduler* outputScheduler = NULL;
+static pthread_mutex_t writeMtx;
 
 /* pcap全局头部 */
 struct pcap_file_header
@@ -76,6 +81,7 @@ int close_output_file()
 	if (output_file == NULL)
 		return 0;
 
+    
 	fclose(output_file);
 	output_file = NULL;
 	return 0;
@@ -91,7 +97,6 @@ int output_binary_packet(char* buf, int numBytes)
 
 int initial_pcap_file(const char* path)
 {
-
     g_outputFd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (g_outputFd < 0) 
     {
@@ -109,9 +114,25 @@ int initial_pcap_file(const char* path)
         .network = 1        //Ethernet
     };
 
+    if (pthread_mutex_init(&writeMtx, NULL) < 0)
+    {
+        cth_log_errcode(CTH_LOG_FATAL, "pthread_mutex_init", errno);
+        goto cleanfd;
+    }
+
+    outputScheduler = cth_task_scheduler_init(false, CTH_OUTPUT_QUE_SIZ);
+    if (outputScheduler == NULL)
+    {
+        cth_log(CTH_LOG_FATAL, "cth_task_scheduler_init");
+        goto cleanmtx;
+    }
+
     write(g_outputFd, &pcapHeader, sizeof pcapHeader);
     return 0;
 
+cleanmtx:
+    pthread_mutex_destroy(&writeMtx);
+cleanfd:
     close(g_outputFd);
 err:
     return -1;
@@ -119,22 +140,50 @@ err:
 
 int close_pcap_file()
 {
+    pthread_mutex_destroy(&writeMtx);
     close(g_outputFd);
+    if (cth_task_scheduler_destroy(outputScheduler))
+    {
+        cth_log(CTH_LOG_FATAL, "cth_task_scheduler_destroy");
+        return -1;
+    }
     return 0;
 }
 
-int output_pcap_packet(char* buf, int inclLen, int origLen)
+typedef struct
 {
+    char* buf;
+    int inclLen;
+    int origLen;
+    pthread_mutex_t* writeMtx;
+} CthOutputArgs;
+
+static void callback_output_packet(void* args)
+{
+    CthOutputArgs* packet = args;
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
     struct pcap_packet_header packetHeader = {
         .ts_sec = ts.tv_sec,
         .ts_usec = ts.tv_nsec / 1000,
-        .incl_len = inclLen,
-        .orig_len = origLen,
+        .incl_len = packet->inclLen,
+        .orig_len = packet->origLen,
     };
+    pthread_mutex_lock(packet->writeMtx);
     write(g_outputFd, &packetHeader, sizeof packetHeader);
-    write(g_outputFd, buf, inclLen);
+    write(g_outputFd, packet->buf, packet->inclLen);
+    pthread_mutex_unlock(packet->writeMtx);
+}
+
+int output_pcap_packet(char* buf, int inclLen, int origLen)
+{
+    CthOutputArgs* packet = malloc(sizeof(CthOutputArgs));
+    packet->buf = buf;
+    packet->inclLen = inclLen;
+    packet->origLen = origLen;
+    packet->writeMtx = &writeMtx;
+
+    cth_task_scheduler_add(outputScheduler, callback_output_packet, packet);
     return 0;
 }
 

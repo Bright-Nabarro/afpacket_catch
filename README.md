@@ -16,4 +16,6 @@
 14. `output.c: iovec` 需要将两write合并, 暂时搁置
 15. `packetmmp v3`版本原始捕获中，前一到两个数据包固定为长度4的空包，原因未知
 16. 全局信号变量SIGINT应该改为原子
-17. `util`中抽象信号处理函数应该删除或重构
+17. `util`中抽象信号屏蔽恢复函数应该删除或重构
+18. `original_capture.c` set_sock 接口需要更改
+19. `logger` 针对ERROR和FATAL设置无缓冲区输出

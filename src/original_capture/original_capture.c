@@ -4,7 +4,6 @@
 #include <assert.h>
 #include <errno.h>
 #include <linux/filter.h>
-#include <linux/if.h>
 #include <linux/if_ether.h>
 #include <linux/if_packet.h>
 #include <poll.h>       //仅仅用于触发事件检测
@@ -29,7 +28,7 @@
 #include "signal_handle.h"
 
 #define RETIRE_BLK_TOV 100
-#define WORK_THREAD_COUNT 1
+#define WORK_THREAD_COUNT 4
 
 static struct tpacket_req3 tpReq;
 static size_t MmapBufferLen;
@@ -40,12 +39,10 @@ typedef struct
     int sigfd;      //用于接收到sigint时唤醒poll
 } CthWorkFds;
 
-/*
- * 绑定到指定接口, 如果出错全部返回-1
- */
-static int bind_socket_eth(int sockfd, const char* ethName, struct ifreq* p_ifr)
+
+static int cth_set_ifr(struct ifreq* p_ifr, int sockfd, const char* ethName)
 {
-	memset(p_ifr, 0, sizeof(struct ifreq));
+    memset(p_ifr, 0, sizeof(struct ifreq));
     
     size_t strLen = strlen(ethName);
 	strncpy(p_ifr->ifr_name, ethName, strLen < IFNAMSIZ-1 ? strLen : IFNAMSIZ -1);
@@ -57,6 +54,14 @@ static int bind_socket_eth(int sockfd, const char* ethName, struct ifreq* p_ifr)
 	}
 	cth_log_digit(CTH_LOG_STATUS, "eth bind index: %d", p_ifr->ifr_ifindex);
 
+    return 0;
+}
+
+/*
+ * 绑定到指定接口, 如果出错全部返回-1
+ */
+static int bind_socket_eth(int sockfd, struct ifreq* p_ifr)
+{
 	//链路层套接字
 	struct sockaddr_ll sll;
 	memset(&sll, 0, sizeof sll);
@@ -214,40 +219,21 @@ err:
     return -1;
 }
 
-int get_original_socket(int* p_sockfd, const char* ethName)
+int set_original_socket(int* p_sockfd, struct ifreq* ifr)
 {
 	int ret = CTH_SUCCESS;
-	*p_sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
-	if (*p_sockfd < 0)
-	{
-		cth_log_errcode(CTH_LOG_FATAL, "socket", errno);
-		p_sockfd = NULL;
-		return CTH_SOCKET_ERR;
-	}
-
-	//绑定到接口
-	struct ifreq ifr;
-	if (ethName == NULL || bind_socket_eth(*p_sockfd, ethName, &ifr) < 0)
-	{
-		cth_log(CTH_LOG_ERROR, "bind_socket_eth error");
-		ret |= CTH_BIND_ERR;
-	}
 
 	//设置混杂模式
 	struct packet_mreq mreq;
 	memset(&mreq, 0, sizeof mreq);
 	mreq.mr_type = PACKET_MR_PROMISC;
-	mreq.mr_ifindex = ifr.ifr_ifindex; 
+	mreq.mr_ifindex = ifr->ifr_ifindex; 
     if (setsockopt(*p_sockfd, SOL_PACKET, PACKET_ADD_MEMBERSHIP,
 				&mreq, sizeof mreq) < 0)
 	{
 		cth_log_errcode(CTH_LOG_ERROR, "setsockopt", errno);
 		ret |= CTH_SETMIX_MODE_ERR;
 	}
-    else
-    {
-        cth_log(CTH_LOG_INFO, "set mix mode success");
-    }
 
     //添加过滤
     const char* bpfarg = get_bpf_argument();
@@ -262,10 +248,6 @@ int get_original_socket(int* p_sockfd, const char* ethName)
         {
             cth_log(CTH_LOG_INFO, "set_socket_filter success");
         }
-    }
-    else
-    {
-        cth_log(CTH_LOG_STATUS, "filter unset, use default");
     }
 
     //添加环形区域
@@ -291,13 +273,13 @@ int get_original_socket(int* p_sockfd, const char* ethName)
         cth_log_errcode(CTH_LOG_ERROR, "setsockopt", errno);
         ret |= CTH_SET_PACKET_RING_ERR;
     }
-    
+
     int fanoutType = PACKET_FANOUT_HASH;
     int fanoutArg = 1 | (fanoutType << 16);
     if (setsockopt(*p_sockfd, SOL_PACKET, PACKET_FANOUT, &fanoutArg, sizeof fanoutArg) < 0)
     {
-        cth_log_errcode(CTH_LOG_FATAL, "setsockopt", errno);
-        ret |= -1;
+        cth_log_errcode(CTH_LOG_FATAL, "fanout setsockopt", errno);
+        ret |= CTH_FATAL_ERR;
     }
 
 pass:
@@ -344,7 +326,6 @@ static int work_block(struct tpacket_block_desc* pbd)
             retNumPkts--;
             continue;
         }
-
         output_pcap_packet((char*)hdr + hdr->tp_mac, hdr->tp_snaplen, hdr->tp_len);
     }
 
@@ -358,7 +339,7 @@ static int original_main_loop(CthWorkFds* fds, char* mmapArea, struct iovec* rd)
     pfd[0].events = POLLIN;
     pfd[1].fd = fds->sigfd;
     pfd[1].events = POLLIN;
-    cth_log(CTH_LOG_INFO, "start capturing");
+    cth_log_digit(CTH_LOG_INFO, "thread: %u start capturing", pthread_self());
 
     size_t index = 0;
     size_t counter = 0;
@@ -389,10 +370,9 @@ static int original_main_loop(CthWorkFds* fds, char* mmapArea, struct iovec* rd)
         index = (index + 1) % tpReq.tp_block_nr;
     }
 
-    cth_log_digit(CTH_LOG_INFO, "Captured %d packets", counter);
     free_mmap(mmapArea);
     free(fds);
-    return 0;
+    return counter;
 
 cleanmmap:
     free_mmap(mmapArea);
@@ -415,20 +395,26 @@ static struct iovec* initial_rd(char* mmapArea)
 static void* cath_thread_handle(void* args)
 {
     CthWorkFds* fds = args;
+    int* ret = malloc(sizeof(int));
 
     void* mmapArea = initial_mmap(fds->sockfd);
     if (mmapArea == NULL)
     {
         cth_log(CTH_LOG_FATAL, "set_packet_ring error");
-        _exit(1);
+        goto err;
     }
 
     struct iovec* rd = initial_rd(mmapArea);
-
-	original_main_loop(fds, mmapArea, rd);
+    
+	*ret = original_main_loop(fds, mmapArea, rd);
     
     free(rd);
-    return NULL;
+
+    return ret;
+
+err:
+    *ret = -1;
+    return ret;
 }
 
 int original_main()
@@ -437,16 +423,34 @@ int original_main()
     pthread_t threads[WORK_THREAD_COUNT];
     const char* ethName = get_ethernet();
 
+    struct ifreq ifr;
+    
     for (size_t i = 0; i < WORK_THREAD_COUNT; i++)
     {
-	    int status = get_original_socket(&sockfd[i], ethName);
-	    if (status & CTH_SOCKET_ERR)
+        sockfd[i] = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+        if (i == 0)
+            cth_set_ifr(&ifr, sockfd[0], ethName);
+
+        if (sockfd[i] < 0)
 	    {
-	    	cth_log(CTH_LOG_FATAL, "cannot open sockfd, exit");
-	    	goto err;
+	    	cth_log_errcode(CTH_LOG_FATAL, "socket", errno);
+            goto err;
+	    }
+        //绑定到接口并设置sockfd属性
+        if (ethName == NULL || bind_socket_eth(sockfd[i], &ifr) < 0)
+	    {
+		    cth_log(CTH_LOG_ERROR, "bind_socket_eth error");
+            goto err;
+	    }
+
+        int status = set_original_socket(&sockfd[i], &ifr);
+        if (status & CTH_FATAL_ERR)
+	    {
+	        cth_log(CTH_LOG_FATAL, "cannot open sockfd, exit");
+	        goto err;
 	    }
     }
-	
+
 	if (initial_signal())
 	{
 		cth_log(CTH_LOG_FATAL, "inital_signal error, exit");
@@ -478,12 +482,29 @@ int original_main()
     }
     pthread_sigmask(SIG_UNBLOCK, &sigset, NULL);
     
+    size_t counter = 0;
     for (size_t i = 0; i < WORK_THREAD_COUNT; i++)
     {
-        pthread_join(threads[i], NULL);
+        int* ret;
+        if (pthread_join(threads[i], (void**)&ret) < 0)
+        {
+            cth_log_errcode(CTH_LOG_FATAL, "pthread_join", errno);
+            goto cleanfd;
+        }
+        if (*ret < 0)
+        {
+            cth_log(CTH_LOG_ERROR, "cath_thread_handle error");
+            continue;
+        }
+        counter += *ret;
+        cth_log_digit(CTH_LOG_INFO, "thread %u end", (unsigned int)threads[i]);
+        cth_log_digit(CTH_LOG_INFO, "-- catch %u packet", *ret);
+
         close(sockfd[i]);
+        free(ret);
     }
 
+    cth_log_digit(CTH_LOG_INFO, "total catch %u packet", counter);
     close_pcap_file();
 	return 0;
 
