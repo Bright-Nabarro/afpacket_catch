@@ -2,7 +2,7 @@
 
 set -e
 
-interfaceName=$(ip -o a | grep -o "[0-9]\+: e.\+" | awk '{print $2}' | head -n 1)
+interfaceName=$(ip -o a | grep -o "[0-9]\+: [ew].\+" | awk '{print $2}' | head -n 1)
 
 mkdir -p ./output
 outputPcap='./output/catch.pcap' 

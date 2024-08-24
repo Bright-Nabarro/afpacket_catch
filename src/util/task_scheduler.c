@@ -35,7 +35,7 @@ CthTaskScheduler* cth_task_scheduler_init(bool useLogger, size_t queueSize)
     CthTaskScheduler* scheduler = calloc(1, sizeof(CthTaskScheduler));
     scheduler->queTotalSize = queueSize;
     scheduler->taskQueue = calloc(1, sizeof(CthTask) * queueSize);
-    scheduler->shutdown = false;
+    scheduler->mainShutdown = false;
     scheduler->addTaskWorking = ATOMIC_VAR_INIT(false);
     scheduler->queSize = 0;
     scheduler->queHead = 0;
@@ -159,7 +159,7 @@ int cth_task_scheduler_add(CthTaskScheduler* scheduler, void(*func)(void*), void
 
 int cth_task_scheduler_destroy(CthTaskScheduler* scheduler)
 {
-    scheduler->shutdown = true; 
+    atomic_store(&scheduler->mainShutdown, true); 
     int* managerRet;
     int ret = 0;
     ret = pthread_mutex_lock(&scheduler->queueMutex);
@@ -232,7 +232,7 @@ static void* cth_task_scheduler_manager(void* arg)
 
     CthTaskScheduler* scheduler = arg;
     int ret;
-    while(!scheduler->shutdown
+    while(!atomic_load(&scheduler->mainShutdown)
         || scheduler->queSize != 0
         || atomic_load(&scheduler->addTaskWorking))
     {
@@ -245,7 +245,7 @@ static void* cth_task_scheduler_manager(void* arg)
         
         while(scheduler->queSize == 0)
         {
-            if (scheduler->shutdown
+            if (atomic_load(&scheduler->mainShutdown)
                 && scheduler->queSize == 0
                 && !atomic_load(&scheduler->addTaskWorking))
             {

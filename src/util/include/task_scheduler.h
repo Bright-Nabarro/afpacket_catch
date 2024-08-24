@@ -29,7 +29,7 @@ typedef struct
     pthread_t managerThread;
     
     //atomic_int except;
-    bool shutdown;
+    atomic_bool mainShutdown;
     atomic_bool addTaskWorking;
 
     int (*task_log)(enum CTH_LOG_LEVEL logLevel, const char* msg);
